@@ -10,3 +10,7 @@ __pycache__/
 
 # Configuração local do Claude Code
 .claude/
+
+# Atalhos e guia de uso pessoal (Windows, tablet): ficam só neste computador
+*.bat
+LEIAME.md
