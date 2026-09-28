@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Meu Voto 2026</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%232a78d6'/><path d='M9 16.5l4.5 4.5L23 11' stroke='white' stroke-width='3.2' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icone.svg">
+  <meta name="theme-color" content="#2a78d6">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="topo">
+    <div class="topo-inner">
+      <div>
+        <h1>Meu Voto <span>2026</span></h1>
+        <p class="sub">Monte sua cédula e conheça quem vai receber o seu voto.</p>
+      </div>
+      <div class="topo-dir">
+        <div class="contagem" id="contagem" aria-live="polite"></div>
+        <button type="button" class="btn fantasma pequeno" id="abrir-guia">Guia</button>
+        <button type="button" class="btn fantasma pequeno" id="sair">Sair</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- A trilha segue a ordem da urna; é montada por jornada.js. -->
+  <nav class="jornada" id="jornada" aria-label="Passos" hidden>
+    <ol class="jornada-inner" id="jornada-passos"></ol>
+  </nav>
+
+  <main>
+    <section class="painel uf-painel">
+      <label for="uf">Seu estado (onde você vota)</label>
+      <select id="uf">
+        <option value="">Escolha…</option>
+      </select>
+      <span class="salvo" id="salvo" aria-live="polite"></span>
+    </section>
+
+    <div id="passo-intro"></div>
+
+    <div id="aba-cedula" data-conteudo="cedula">
+    <section id="cedula" class="cedula" hidden>
+      <div id="slots" class="slots"></div>
+      <div class="acoes">
+        <button type="button" class="btn primario" id="imprimir">Imprimir cola</button>
+        <p class="nota">O celular não pode entrar na cabine de votação, mas a cola em papel pode.</p>
+      </div>
+      <div id="ajuda-portal"></div>
+      <div class="cartao">
+        <h3>Para ir além</h3>
+        <p class="explica">Veja quais empresas mais receberam das campanhas do seu estado, quantas campanhas cada uma atende e o que chama atenção nelas.</p>
+        <button type="button" class="btn" id="ver-fornecedores">Fornecedores de campanha</button>
+      </div>
+    </section>
+
+    <section class="painel futuro" id="futuro" hidden>
+      <h2>Para onde foi o seu voto</h2>
+      <p>Depois da apuração, a partir de 4 de outubro, esta área vai mostrar se os seus candidatos foram eleitos e, no caso de deputado, quem o seu voto ajudou a eleger.</p>
+    </section>
+    </div>
+
+    <section id="aba-ajuda" data-conteudo="ajuda" hidden>
+      <div id="passo-slots" class="slots passo-slots"></div>
+      <div id="ajuda-corpo"></div>
+    </section>
+
+    <section id="aba-quiz" data-conteudo="quiz" hidden>
+      <div id="quiz-corpo"></div>
+    </section>
+
+    <div id="passo-nav" class="passo-nav"></div>
+
+    <footer class="rodape">
+      <p>O Meu Voto organiza dados públicos do TSE, da Câmara dos Deputados, da Receita Federal e do Portal da Transparência para ajudar você a comparar candidatos. Ele não recomenda em quem votar e não é pesquisa eleitoral: as estimativas de vagas usam os votos de 2022 e servem só como referência.</p>
+      <p id="aviso-dados">Sua cédula e suas respostas ficam guardadas apenas no seu computador, mesmo quando você usa o app pelo tablet.</p>
+    </footer>
+  </main>
+
+  <dialog id="ficha" class="ficha" aria-labelledby="ficha-nome">
+    <header class="ficha-cab" id="ficha-cab"></header>
+    <nav class="ficha-nav" id="ficha-nav" role="tablist" aria-label="Partes da ficha"></nav>
+    <div class="ficha-rolagem" id="ficha-rolagem">
+      <div class="ficha-painel" id="ficha-painel" role="tabpanel"></div>
+    </div>
+  </dialog>
+
+  <dialog id="empresa-dlg" class="empresa-dlg" aria-label="Ficha da empresa">
+    <div id="empresa-dlg-corpo" class="empresa-dlg-corpo"></div>
+  </dialog>
+
+  <dialog id="lista-dlg" class="lista-dlg" aria-label="Candidatos da lista">
+    <div id="lista-dlg-corpo" class="lista-dlg-corpo"></div>
+  </dialog>
+
+  <dialog id="guia" class="guia" aria-labelledby="guia-titulo">
+    <div id="guia-corpo" class="guia-corpo"></div>
+  </dialog>
+
+  <div id="cola" class="cola" aria-hidden="true"></div>
+
+  <script src="app.js"></script>
+  <script src="jornada.js"></script>
+  <script src="quiz.js"></script>
+  <script src="ficha.js"></script>
+  <script src="listas.js"></script>
+  <script src="empresa.js"></script>
+</body>
+</html>

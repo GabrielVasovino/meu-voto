@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Entrar · Meu Voto 2026</title>
+  <link rel="icon" href="/icone.svg">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icone.svg">
+  <meta name="theme-color" content="#2a78d6">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="login-pagina">
+    <form class="login-caixa" id="form" novalidate>
+      <h1>Meu Voto <span>2026</span></h1>
+      <p class="sub" id="subtitulo">Entre para ver sua cédula.</p>
+
+      <label for="usuario">Usuário</label>
+      <input id="usuario" name="usuario" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+
+      <label for="senha">Senha</label>
+      <input id="senha" name="senha" type="password" autocomplete="current-password" required>
+
+      <div id="bloco-confirma" hidden>
+        <label for="confirma">Repita a senha</label>
+        <input id="confirma" name="confirma" type="password" autocomplete="new-password">
+      </div>
+
+      <button type="submit" class="btn primario" id="enviar">Entrar</button>
+      <p class="login-erro" id="erro" role="alert"></p>
+      <p class="login-nota" id="nota" hidden>Este é o primeiro acesso. O login fica guardado só no seu computador e vale para o computador e para o tablet. A senha precisa ter pelo menos 8 caracteres.</p>
+    </form>
+  </main>
+  <script src="/login.js"></script>
+</body>
+</html>

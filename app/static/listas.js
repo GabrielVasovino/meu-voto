@@ -1,0 +1,551 @@
+"use strict";
+
+// Tela de deputados: um cartão por lista (federação ou partido), com as vagas, quem as
+// ocuparia e quem está na disputa. Clicar em "Ver os candidatos" abre a lista completa.
+
+let listasAtual = null;
+let perfisAtual = null;
+
+// Como o usuário quer ver as vagas: por lista ou por pessoa, e em que ordem. Fica guardado neste navegador.
+const visaoListas = (() => {
+  try {
+    return { modo: "grupo", ordem: "padrao", ...JSON.parse(localStorage.getItem("visaoListas") || "{}") };
+  } catch {
+    return { modo: "grupo", ordem: "padrao" };
+  }
+})();
+
+function guardarVisao() {
+  try { localStorage.setItem("visaoListas", JSON.stringify(visaoListas)); } catch { /* sem armazenamento, segue sem guardar */ }
+}
+
+function faixaDisputa(vagas) {
+  return Math.max(2, Math.round(vagas * 0.25));
+}
+
+function margemLista(g) {
+  const rel = (v) => (g.votos2022 ? v / g.votos2022 : 1);
+  if (g.faltamParaMaisUma == null) return { texto: "", tag: "" };
+  const perto = rel(g.faltamParaMaisUma) < 0.05;
+  const ameacada = g.vagas && g.folgaDaUltima != null && rel(g.folgaDaUltima) < 0.05;
+  let texto = `Com uns ${brlNumeroCurto(g.faltamParaMaisUma)} votos a mais, ganharia outra vaga.`;
+  if (g.vagas && g.folgaDaUltima != null) texto += ` A última está garantida por uma folga de ${brlNumeroCurto(g.folgaDaUltima)}.`;
+  let tag = "";
+  if (ameacada) tag = `<span class="leitura-tag tom-atencao">Última vaga apertada</span>`;
+  else if (perto) tag = `<span class="leitura-tag tom-info">Perto de ganhar uma vaga</span>`;
+  return { texto, tag };
+}
+
+const numeroCurto = new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 });
+function brlNumeroCurto(v) { return numeroCurto.format(v); }
+
+function htmlComoFunciona(p, item) {
+  return `<ol class="como-funciona">
+    <li><span class="passo">1</span><div><strong>O voto vai para a lista</strong><span>A lista é a federação ou o partido do candidato. Votar só no número do partido também conta.</span></div></li>
+    <li><span class="passo">2</span><div><strong>A lista ganha vagas</strong><span>Quanto mais votos, mais vagas. O estado tem ${p.vagas} vagas de ${esc(item.rotulo.toLowerCase())}.</span></div></li>
+    <li><span class="passo">3</span><div><strong>Os mais votados entram</strong><span>Dentro de cada lista, as vagas ficam com quem teve mais votos.</span></div></li>
+  </ol>`;
+}
+
+function rosto(c, meuId) {
+  const x = afinidadePessoa(c.id);
+  const afin = x ? ` ${textoAfinidadePessoa(c.id)}.` : "";
+  return `<button type="button" class="rosto${c.id === meuId ? " meu" : ""}" data-ficha-lista="${c.id}" data-pessoa="${c.id}" title="${esc(nomeProprio(c.nomeUrna))}, em ${c.posicao}º lugar.${afin} Clique para abrir a ficha.">
+    ${x ? `<span class="rosto-afin" aria-hidden="true">${pctAfinidade(x)}%</span>` : ""}
+    ${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto rosto-foto")}
+    <span class="rosto-nome">${esc(nomeProprio(c.nomeUrna))}</span>
+  </button>`;
+}
+
+// Afinidade da lista com o quiz, na mesma linha usada nos cartões de Senado, Governo e Presidência.
+function linhaAfinidadeLista(g) {
+  if (respostasQuiz() < 3 || !quizDados) return "";
+  return `<div class="maj-afin"><span>Afinidade da lista com o seu quiz</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
+}
+
+function htmlListaCartao(g, item) {
+  const voto = estado.votos[item.slot];
+  const minha = voto && voto.coligacao === g.id;
+  const partidos = g.partidos.length > 1 ? `<div class="lista-partidos">${g.partidos.map((s) => `<span class="chip">${esc(s)}</span>`).join("")}</div>` : "";
+  const mostrar = 12;
+  const rostos = g.eleitos.slice(0, mostrar).map((c) => rosto(c, voto?.id)).join("");
+  const mais = g.eleitos.length > mostrar
+    ? `<button type="button" class="rosto rosto-mais" data-abrir-lista="${esc(g.id)}">+${g.eleitos.length - mostrar}</button>` : "";
+  const disputa = g.disputa.length ? `<p class="lista-rot">Na disputa pela última vaga</p>
+    <div class="chips">${g.disputa.map((c) => `<button type="button" class="chip chip-botao${voto?.id === c.id ? " destaque" : ""}" data-ficha-lista="${c.id}">${c.posicao}º ${esc(nomeProprio(c.nomeUrna))}</button>`).join("")}</div>` : "";
+  return `<article class="lista-card clicavel${minha ? " minha" : ""}" data-abrir-lista="${esc(g.id)}" tabindex="0" role="button"
+      aria-label="Abrir a lista ${esc(agremiacao(g.id))}: todos os candidatos e a análise de quem ocuparia as vagas">
+    <header class="lista-cab">
+      <div class="lista-nome">
+        <h3>${esc(agremiacao(g.id))}</h3>
+        ${partidos}
+        ${minha ? `<span class="badge ok">✓ Seu voto está nesta lista</span>` : ""}
+      </div>
+      <div class="lista-numeros">
+        <div class="lista-num" title="Vagas que a lista teria se os votos de 2022 se repetissem"><strong>${g.vagas}</strong><span>${g.vagas === 1 ? "vaga" : "vagas"}</span></div>
+        <div class="lista-num nota" data-nota="${esc(g.id)}" title="Nota do grupo, de 0 a 100: média de integridade e desempenho de quem ocuparia as vagas"><strong>…</strong><span>nota</span></div>
+      </div>
+    </header>
+    ${linhaAfinidadeLista(g)}
+    <div class="maj-afin maj-integ" data-integ-lista="${esc(g.id)}"><span>Integridade de quem entraria (média)</span><small class="maj-carregando">calculando…</small></div>
+    <p class="lista-rot">Quem ocuparia as vagas</p>
+    <div class="rostos">${rostos}${mais}</div>
+    ${disputa}
+    <p class="lista-abrir">Toque para ver os ${g.aptos} candidatos e a análise de quem entraria <span aria-hidden="true">›</span></p>
+  </article>`;
+}
+
+function htmlListaSemVaga(g, item) {
+  const voto = estado.votos[item.slot];
+  const minha = voto && voto.coligacao === g.id;
+  const m = margemLista(g);
+  return `<article class="lista-card compacta${minha ? " minha" : ""}">
+    <header class="lista-cab"><div><h3>${esc(agremiacao(g.id))}</h3>
+      <small>Teve ${pct.format(g.percentual)} dos votos em 2022 e precisaria de mais uns ${brlNumeroCurto(g.faltamParaMaisUma || 0)} para eleger alguém.</small></div>
+      <button type="button" class="btn pequeno" data-abrir-lista="${esc(g.id)}">Ver os ${g.aptos}</button></header>
+    ${minha ? `<p class="lista-minha">✓ Seu voto está nesta lista</p>` : ""}
+    ${linhaAfinidadeLista(g)}
+    ${g.maisFortes.length ? `<p class="lista-rot">Mais bem colocados: ${listaNatural(g.maisFortes.map((c) => esc(nomeProprio(c.nomeUrna))))}</p>` : ""}
+    ${m.tag}
+  </article>`;
+}
+
+async function carregarProporcional(item) {
+  const corpo = $("#ajuda-corpo");
+  corpo.innerHTML = `<p class="carregando">Montando as listas com os votos de 2022… Na primeira vez pode levar um minuto.</p>`;
+  let p;
+  try {
+    // A afinidade do quiz (se respondido) é carregada junto, para os cartões já nascerem com ela.
+    [p] = await Promise.all([api(`/api/listas?uf=${estado.uf}&cargo=${item.cargo}`), afinidadePronta()]);
+  } catch (e) {
+    corpo.innerHTML = `<p class="carregando">${esc(e.message)}</p>`;
+    return;
+  }
+  if (ajuda.cargo !== item.cargo) return;
+  listasAtual = { p, item };
+  desenharListas();
+}
+
+// Balão de informação: um botão pequeno que abre a explicação por cima, sem empurrar a tela.
+function balao(titulo, html) {
+  return `<details class="info-balao"><summary>${titulo}</summary><div class="info-balao-corpo">${html}</div></details>`;
+}
+
+function desenharListas() {
+  const { p, item } = listasAtual;
+  const corpo = $("#ajuda-corpo");
+  const semVaga = p.grupos.filter((g) => g.vagas === 0);
+  const metodo = htmlMetodo(p).replace(/^\s*<details[^>]*>\s*<summary>[^<]*<\/summary>/, "").replace(/<\/details>\s*$/, "");
+  const comQuiz = respostasQuiz() >= 3 && quizDados;
+  corpo.innerHTML = `
+    <div class="listas-barra">
+      <div class="segmentado" role="group" aria-label="Como ver as vagas">
+        <button type="button" data-visao="grupo" aria-pressed="${visaoListas.modo === "grupo"}">Por lista</button>
+        <button type="button" data-visao="pessoa" aria-pressed="${visaoListas.modo === "pessoa"}">Por pessoa</button>
+      </div>
+      <label class="visao-ordem">Ordenar por
+        <select id="visao-ordem">
+          <option value="padrao"${visaoListas.ordem === "padrao" ? " selected" : ""}>${visaoListas.modo === "pessoa" ? "Posição na lista" : "Número de vagas"}</option>
+          ${comQuiz ? `<option value="afinidade"${visaoListas.ordem === "afinidade" ? " selected" : ""}>Maior afinidade com você</option>` : ""}
+          <option value="maior"${visaoListas.ordem === "maior" ? " selected" : ""}>Maior nota de integridade</option>
+          <option value="menor"${visaoListas.ordem === "menor" ? " selected" : ""}>Menor nota de integridade</option>
+        </select>
+      </label>
+      <div class="busca-listas">
+        <input type="search" id="busca-lista" autocomplete="off" placeholder="Procurar candidato por nome ou número" aria-label="Procurar candidato">
+        <div id="busca-lista-resultado" class="busca-resultado" aria-live="polite"></div>
+      </div>
+    </div>
+    <div class="listas-info">
+      ${balao("Como o voto vira vaga", `${htmlComoFunciona(p, item)}
+        <p>Os cartões mostram como ficariam as ${p.vagas} vagas se os votos de 2022 se repetissem com as federações de 2026. Toque numa pessoa para abrir a ficha, ou em "Ver os candidatos" para a lista completa.</p>`)}
+      ${balao("Como ler os números", `<ul>
+        <li><strong>Integridade</strong> parte de 100 para cada pessoa e perde 20 pontos por indício que vale conferir e 50 por alerta sério.</li>
+        <li><strong>Desempenho</strong> vale para quem já tem mandato e compara presença, projetos aprovados, relatorias, parte simbólica dos projetos e gastos com os colegas.</li>
+        <li><strong>Vagas</strong> é quantas cadeiras a lista teria. <strong>Nota</strong> é a média, de 0 a 100, de quem ocuparia essas vagas. A posição política não entra, porque isso depende da sua opinião.</li>
+        <li>O anel em volta da foto fica verde sem nada para conferir, amarelo com algo para conferir e vermelho com alerta sério ou integridade abaixo de 50 (vários pontos somados). A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu quiz.</li>
+      </ul>`)}
+      ${balao("Como a estimativa é feita", metodo)}
+      ${comQuiz ? "" : `<button type="button" class="link-btn listas-quiz" data-ir-passo="afinidade">Faça o quiz para ordenar por afinidade</button>`}
+    </div>
+    <div id="listas-visao"></div>
+    ${semVaga.length ? `<details class="mais listas-sem-vaga"><summary>Listas que não elegeriam ninguém pela estimativa (${semVaga.length})</summary>
+      <div class="listas-grade compacta">${semVaga.map((g) => htmlListaSemVaga(g, item)).join("")}</div></details>` : ""}`;
+  desenharVisao();
+  carregarIndicadores(item);
+  carregarPerfis(item);
+  document.querySelectorAll(".listas-barra [data-visao]").forEach((b) => b.addEventListener("click", () => {
+    visaoListas.modo = b.dataset.visao;
+    guardarVisao();
+    desenharListas();
+  }));
+  $("#visao-ordem").addEventListener("change", (e) => {
+    visaoListas.ordem = e.target.value;
+    guardarVisao();
+    desenharVisao();
+  });
+  let timer;
+  $("#busca-lista").addEventListener("input", (e) => {
+    clearTimeout(timer);
+    const q = e.target.value.trim();
+    const alvo = $("#busca-lista-resultado");
+    if (q.length < 2) { alvo.innerHTML = ""; return; }
+    timer = setTimeout(async () => {
+      const param = /^\d+$/.test(q) ? `numero=${q}` : `q=${encodeURIComponent(q)}`;
+      try {
+        const d = await api(`/api/buscar?uf=${estado.uf}&cargo=${item.cargo}&${param}`);
+        const lista = d.candidatos.slice(0, 8);
+        alvo.innerHTML = lista.length ? lista.map((c) => {
+          const g = p.grupos.find((x) => x.id === c.coligacao);
+          const pos = g && [...g.eleitos, ...g.disputa].find((x) => x.id === c.id);
+          const onde = pos ? (pos.posicao <= g.vagas ? "Ocuparia uma vaga" : "Está na disputa") : "Fora das vagas estimadas";
+          return `<button type="button" class="resultado-item" data-ficha-lista="${c.id}">
+            <strong>${esc(nomeProprio(c.nomeUrna))}</strong> <span>Número ${esc(c.numero)}, ${esc(c.partido)}</span>
+            <em>${onde}</em></button>`;
+        }).join("") : `<p class="explica">Ninguém encontrado com "${esc(q)}".</p>`;
+      } catch (err) {
+        alvo.innerHTML = `<p class="erro">${esc(err.message)}</p>`;
+      }
+    }, 250);
+  });
+}
+
+// ---------- indicadores de qualidade de cada lista ----------
+
+let indicadoresAtual = null;
+
+function htmlIndicadoresCarregando(progresso) {
+  const texto = progresso?.total
+    ? `Calculando os indicadores do grupo (${progresso.feitos} de ${progresso.total} pessoas)…`
+    : "Calculando os indicadores do grupo…";
+  return `<p class="ind-carregando"><span class="giro" aria-hidden="true"></span>${texto}</p>`;
+}
+
+function barraIndicador(rotulo, valor, vazio) {
+  return `<div class="ind-barra"><span class="ind-rot">${rotulo}</span>
+    <span class="trilho">${valor != null ? `<span class="cheio" style="width:${valor}%"></span>` : ""}</span>
+    <b>${valor != null ? valor : "—"}</b>${valor == null ? `<small>${vazio}</small>` : ""}</div>`;
+}
+
+function htmlIndicadores(g) {
+  if (!g) return "";
+  const frases = [];
+  frases.push(g.semAlertaForte === g.membros
+    ? "Ninguém do grupo tem alerta forte."
+    : `${g.semAlertaForte === 0 ? "Todas as pessoas" : `${g.membros - g.semAlertaForte} das ${g.membros} pessoas`} ${g.membros - g.semAlertaForte === 1 ? "tem" : "têm"} algo para conferir${g.comAlertaSerio ? `, e ${g.comAlertaSerio === 1 ? "uma tem" : `${g.comAlertaSerio} têm`} alerta sério` : ""}.`);
+  frases.push(g.comMandato
+    ? `${g.comMandato === 1 ? "Uma pessoa já tem mandato de deputado" : `${g.comMandato} pessoas já têm mandato de deputado`}, e é daí que sai o desempenho.`
+    : "Ninguém do grupo tem mandato de deputado hoje, então não há desempenho para comparar.");
+  return `<div class="ind-topo">
+      <div class="ind-barras">
+        ${barraIndicador("Integridade", g.integridade, "")}
+        ${barraIndicador("Desempenho", g.desempenho, "sem mandato")}
+      </div>
+    </div>
+    <p class="ind-resumo">${frases.join(" ")}</p>`;
+}
+
+// Média de integridade das pessoas que ocupariam as vagas da lista, na mesma barra dos cartões de Senado e Governo.
+function celulaIntegridadeLista(g) {
+  if (g?.integridade == null) return `<small class="sem-afinidade">Sem dados</small>`;
+  const n = Math.round(g.integridade);
+  const nivel = n >= 80 ? "ok" : n >= 50 ? "conferir" : "serio";
+  const detalhe = `${g.semAlertaForte} de ${g.membros} sem nada para conferir${g.comAlertaSerio ? `, ${g.comAlertaSerio} com alerta sério` : ""}`;
+  return `<span class="afin-mini integ-${nivel}" title="${esc(detalhe)}">
+    <span class="trilho"><span class="cheio" style="width:${Math.max(n, 2)}%"></span></span><b>${n}<small>/100</small></b></span>`;
+}
+
+function aplicarIndicadores() {
+  if (!indicadoresAtual?.pronto) return;
+  document.querySelectorAll(".lista-num.nota[data-nota]").forEach((el) => {
+    const g = indicadoresAtual.grupos?.[el.dataset.nota];
+    el.querySelector("strong").textContent = g?.indice ?? "—";
+  });
+  document.querySelectorAll("[data-integ-lista]").forEach((el) => {
+    const g = indicadoresAtual.grupos?.[el.dataset.integLista];
+    el.innerHTML = `<span>Integridade de quem entraria (média)</span>${celulaIntegridadeLista(g)}`;
+  });
+  document.querySelectorAll(".lista-card[data-abrir-lista]").forEach((el) => {
+    const g = indicadoresAtual.grupos?.[el.dataset.abrirLista];
+    for (const [id, p] of Object.entries(g?.pessoas || {})) {
+      const rosto = el.querySelector(`[data-pessoa="${id}"]`);
+      if (!rosto) continue;
+      rosto.classList.add(`anel-${nivelAnel(p.alertas, p.atencoes, p.integridade)}`);
+      if (p.titulos.length) rosto.title += ` Pontos de atenção: ${p.titulos.join("; ")}.`;
+    }
+  });
+}
+
+// A ordem "maior/menor" usa só a integridade, que vale para todos (o desempenho só existe para quem tem mandato).
+function integridadeDoGrupo(id) {
+  return indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[id]?.integridade ?? null : null;
+}
+
+function ordenarPorNota(itens, nota, desempate = () => null, afinidade = null) {
+  if (visaoListas.ordem === "padrao") return itens;
+  if (visaoListas.ordem === "afinidade") {
+    // Sem quiz respondido, a opção some; se estava guardada, volta à ordem padrão.
+    if (!afinidade || respostasQuiz() < 3 || !quizDados) return itens;
+    return [...itens].sort((a, b) => notaAfinidade(afinidade(b)) - notaAfinidade(afinidade(a)));
+  }
+  const sinal = visaoListas.ordem === "maior" ? -1 : 1;
+  // Quem não tem nota vai para o fim nas duas ordens.
+  return [...itens].sort((a, b) => {
+    const x = nota(a), y = nota(b);
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    return sinal * (x - y) || sinal * ((desempate(a) ?? 50) - (desempate(b) ?? 50));
+  });
+}
+
+function desenharVisao() {
+  const alvo = $("#listas-visao");
+  if (!alvo || !listasAtual) return;
+  const { p, item } = listasAtual;
+  const comVaga = p.grupos.filter((g) => g.vagas > 0);
+  const semNotas = !["padrao", "afinidade"].includes(visaoListas.ordem) && !indicadoresAtual?.pronto
+    ? `<p class="explica">As notas de integridade ainda estão sendo calculadas. A ordem se ajusta sozinha quando terminar.</p>` : "";
+  if (visaoListas.modo === "pessoa") {
+    alvo.innerHTML = semNotas + htmlVisaoPessoas(comVaga, item);
+    return;
+  }
+  const grupos = ordenarPorNota(comVaga, (g) => integridadeDoGrupo(g.id), (g) => indicadoresAtual?.grupos?.[g.id]?.desempenho,
+    (g) => afinidadePartidos(g.partidos));
+  alvo.innerHTML = semNotas + `<div class="listas-grade">${grupos.map((g) => htmlListaCartao(g, item)).join("")}</div>`;
+  aplicarIndicadores();
+  aplicarPerfis();
+}
+
+function htmlVisaoPessoas(grupos, item) {
+  const voto = estado.votos[item.slot];
+  const pessoas = grupos.flatMap((g) => g.eleitos.map((c) => ({ ...c, grupo: g.id, ind: indicadoresAtual?.grupos?.[g.id]?.pessoas?.[String(c.id)] })));
+  // Na visão por pessoa, vale o voto da própria pessoa quando ela já é deputada federal; senão, o do partido.
+  const ordenadas = ordenarPorNota(pessoas, (c) => c.ind?.integridade, (c) => c.ind?.desempenho,
+    (c) => afinidadePessoa(c.id) || afinidadePartidos([c.partido]));
+  const linhas = ordenadas.map((c) => {
+    const i = c.ind;
+    const anel = !i ? "" : `anel-${nivelAnel(i.alertas, i.atencoes, i.integridade)}`;
+    const detalhe = !i ? "Calculando…"
+      : `Integridade ${i.integridade ?? "—"}${i.desempenho != null ? `, desempenho ${i.desempenho} como deputado ${i.casa === "estadual" ? "estadual" : "federal"}` : ", sem mandato de deputado"}.${i.titulos.length ? ` ${esc(i.titulos.join("; "))}.` : ""}${textoAfinidadePessoa(c.id) ? ` ${textoAfinidadePessoa(c.id)}.` : ""}`;
+    return `<li class="pessoa-linha${voto?.id === c.id ? " meu" : ""}">
+      <button type="button" class="pessoa-botao" data-ficha-lista="${c.id}" title="Abrir a ficha">
+        <span class="rosto ${anel}">${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto rosto-foto")}</span>
+        <span class="pessoa-info">
+          <strong>${esc(nomeProprio(c.nomeUrna))}</strong>
+          <small>${esc(c.partido)}, ${c.posicao}º na lista ${esc(agremiacao(c.grupo))}</small>
+          <small class="pessoa-det">${detalhe}</small>
+        </span>
+        <span class="pessoa-nota${i?.nota == null ? " vazia" : ""}" title="Pontuação de 0 a 100">${i?.nota ?? "—"}</span>
+      </button>
+    </li>`;
+  }).join("");
+  return `<p class="explica">São as ${pessoas.length} pessoas que ocupariam as vagas pela estimativa, que é o grupo para o qual a pontuação é calculada. Para ver os outros candidatos, use a busca acima ou abra a lista completa de cada partido.</p>
+    <ol class="pessoas-lista">${linhas}</ol>`;
+}
+
+function aplicarPerfis() {
+  if (!perfisAtual) return;
+  document.querySelectorAll(".lista-perfil[data-perfil]").forEach((el) => {
+    const p = perfisAtual[el.dataset.perfil];
+    el.innerHTML = p ? textoPerfil(p) : "";
+  });
+}
+
+function textoPerfil(p) {
+  const quem = p.federacao ? "da federação" : "do partido";
+  const casa = p.casa === "estadual" ? "estaduais" : "federais";
+  if (p.indice == null || !p.membros) return `${p.federacao ? "A federação não tem" : "O partido não tem"} deputados ${casa} hoje, então não há histórico de bancada para mostrar.`;
+  return `<strong>Histórico da bancada:</strong> ${p.membros === 1 ? `o único deputado ${casa.slice(0, -1)} atual ${quem} tem` : `os ${p.membros} deputados ${casa} atuais ${quem} têm`} desempenho médio de <strong>${p.indice}</strong>${p.referencia != null ? `, contra ${p.referencia} ${p.casa === "estadual" ? "na ALESP" : "na Câmara"} toda` : ""}.`;
+}
+
+async function carregarPerfis(item) {
+  const cargo = item.cargo;
+  let perfis;
+  try {
+    perfis = await api(`/api/perfis?uf=${estado.uf}&cargo=${cargo}`);
+  } catch {
+    return;
+  }
+  if (!listasAtual || listasAtual.item.cargo !== cargo) return;
+  perfisAtual = perfis;
+  aplicarPerfis();
+}
+
+async function carregarIndicadores(item) {
+  const cargo = item.cargo;
+  try {
+    indicadoresAtual = await api(`/api/indicadores?uf=${estado.uf}&cargo=${cargo}`);
+  } catch {
+    document.querySelectorAll(".lista-ind").forEach((el) => { el.innerHTML = ""; });
+    return;
+  }
+  if (!listasAtual || listasAtual.item.cargo !== cargo || ajuda.cargo !== cargo) return;
+  if (indicadoresAtual.pronto) {
+    // A ordem por pontuação e a visão por pessoa dependem das notas: redesenha.
+    if (visaoListas.modo === "pessoa" || visaoListas.ordem !== "padrao") desenharVisao();
+    else aplicarIndicadores();
+  } else document.querySelectorAll(".lista-ind").forEach((el) => { el.innerHTML = htmlIndicadoresCarregando(indicadoresAtual.progresso); });
+  if (!indicadoresAtual.pronto || indicadoresAtual.atualizando) {
+    setTimeout(() => { if (listasAtual?.item.cargo === cargo && ajuda.cargo === cargo && !$("#aba-ajuda").hidden) carregarIndicadores(item); }, 4000);
+  }
+}
+
+// ---------- lista completa (diálogo) ----------
+
+async function abrirLista(idGrupo) {
+  const { p, item } = listasAtual;
+  const g = p.grupos.find((x) => x.id === idGrupo);
+  const dlg = $("#lista-dlg");
+  $("#lista-dlg-corpo").innerHTML = `<p class="carregando">Carregando os candidatos…</p>`;
+  if (!dlg.open) dlg.showModal();
+  let r;
+  try {
+    r = await api(`/api/ranking?uf=${estado.uf}&cargo=${item.cargo}&grupo=${encodeURIComponent(idGrupo)}`);
+  } catch (e) {
+    $("#lista-dlg-corpo").innerHTML = `<p class="erro">${esc(e.message)}</p>`;
+    return;
+  }
+  dlg.dataset.grupo = idGrupo;
+  $("#lista-dlg-corpo").innerHTML = htmlListaCompleta(g, r, item);
+}
+
+// "Eleito por QP" -> "foi eleito", e assim por diante.
+function resultado2022(situacao) {
+  const s = (situacao || "").toLowerCase();
+  if (s.startsWith("eleito")) return "foi eleito";
+  if (s.startsWith("suplente")) return "ficou como suplente";
+  return "não se elegeu";
+}
+
+function linhaCandidato(c, g, item) {
+  const voto = estado.votos[item.slot];
+  const naCedula = voto && voto.id === c.id;
+  const hist = [
+    c.votos2022 ? `Teve ${numero.format(c.votos2022)} votos para deputado em 2022 e ${resultado2022(c.situacao2022)}`
+      : "Não disputou para deputado em 2022",
+    c.votosMunicipais ? `em 2024, teve ${numero.format(c.votosMunicipais)} votos para ${c.cargoMunicipal.toLowerCase()} em ${c.municipio}${c.eleitoMunicipal ? " e se elegeu" : ""}` : "",
+  ].filter(Boolean).join("; ");
+  const acao = !c.apto ? "" : naCedula
+    ? `<button type="button" class="btn pequeno" data-lista-retirar="${c.id}">Retirar da cédula</button>`
+    : `<button type="button" class="btn pequeno primario" data-lista-cedula="${c.id}">Pôr na cédula</button>`;
+  return `<li class="cand-linha${naCedula ? " meu" : ""}">
+    <span class="cand-pos">${c.posicao ?? "—"}</span>
+    ${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto cand-linha-foto")}
+    <div class="cand-linha-info">
+      <button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>
+      <span class="cand-linha-meta">Número ${esc(c.numero)}, ${esc(c.partido)}${c.apto ? "" : `. ${esc(c.situacao)}`}</span>
+      <span class="cand-linha-meta">${hist}. Arrecadou ${c.arrecadado ? brlCompacto.format(c.arrecadado) : "R$ 0"} até agora.</span>
+      ${textoAfinidadePessoa(c.id) ? `<span class="cand-linha-afin">${textoAfinidadePessoa(c.id)}.</span>` : ""}
+      ${htmlAvisosPessoa(g, c.id)}
+    </div>
+    ${c.forca != null ? `<div class="forca" title="Força estimada: maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e dinheiro de 2026"><span class="trilho"><span class="cheio" style="width:${c.forca}%"></span></span><span>${Math.round(c.forca)}</span></div>` : ""}
+    <div class="cand-linha-acoes">${acao}</div>
+  </li>`;
+}
+
+// Nota e avisos de uma pessoa (existem para quem ocuparia as vagas, que é o grupo avaliado).
+function htmlAvisosPessoa(g, id) {
+  const p = indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id]?.pessoas?.[String(id)] : null;
+  if (!p) return "";
+  const nivel = { serio: "bad", conferir: "warn", ok: "ok" }[nivelAnel(p.alertas, p.atencoes, p.integridade)];
+  const rotulo = p.alertas ? `${p.alertas} ${p.alertas === 1 ? "alerta sério" : "alertas sérios"}`
+    : p.atencoes ? `${p.atencoes} ${p.atencoes === 1 ? "ponto" : "pontos"} para conferir` : "Nada para conferir";
+  const desempenho = p.desempenho != null ? `, desempenho ${p.desempenho}` : "";
+  return `<span class="cand-linha-avisos"><span class="badge ${nivel}">${rotulo}</span>
+    <small>Nota ${p.nota ?? "—"} (integridade ${p.integridade ?? "—"}${desempenho})${p.titulos.length ? `: ${esc(p.titulos.join("; "))}` : ""}</small></span>`;
+}
+
+// Resumo de quem entraria: quantos têm algo para conferir e quais são os avisos, pessoa por pessoa.
+function htmlQuemEntraria(g, ind, entrariam) {
+  if (!ind || !entrariam.length) return "";
+  const com = entrariam.map((c) => ({ c, p: ind.pessoas?.[String(c.id)] }))
+    .filter((x) => x.p && (x.p.alertas || x.p.atencoes))
+    .sort((a, b) => (b.p.alertas - a.p.alertas) || (b.p.atencoes - a.p.atencoes));
+  const cabeca = com.length
+    ? `${com.length} ${com.length === 1 ? "pessoa tem" : "pessoas têm"} algo para conferir entre as ${entrariam.length} que entrariam.`
+    : `Ninguém entre as ${entrariam.length} pessoas que entrariam tem algo para conferir.`;
+  return `<div class="quem-entraria">
+    <h3>Quem entraria: o que conferir</h3>
+    <p class="explica">${cabeca} Toque no nome para ver a ficha com os detalhes.</p>
+    ${com.length ? `<ul>${com.map(({ c, p }) => `<li>
+      <span class="badge ${nivelAnel(p.alertas, p.atencoes, p.integridade) === "serio" ? "bad" : "warn"}">${p.alertas ? "Alerta sério" : p.integridade < 50 ? "Vários pontos" : "Conferir"}</span>
+      <button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>
+      <small>${esc(p.titulos.join("; "))}</small></li>`).join("")}</ul>` : ""}
+  </div>`;
+}
+
+function htmlListaCompleta(g, r, item) {
+  const vagas = r.vagasEstimadas;
+  const faixa = faixaDisputa(vagas);
+  const aptos = r.candidatos.filter((c) => c.posicao);
+  const problema = r.candidatos.filter((c) => !c.posicao);
+  const grupos = [
+    ["Ocupariam as vagas", "Pela estimativa, são estes que entram. Em 2022, quem estava nesta posição se elegeu cerca de 7 em cada 10 vezes.", aptos.filter((c) => c.posicao <= vagas), true],
+    ["Na disputa pela última vaga", "Estão perto da linha de corte, onde um voto a mais decide quem entra. Em 2022, uns 3 em cada 10 nesta faixa se elegeram.", aptos.filter((c) => vagas && c.posicao > vagas && c.posicao <= vagas + faixa), true],
+    ["Chance baixa", "Precisariam de bem mais votos do que tiveram em 2022. Nesta faixa, cerca de 1 em cada 10 costuma se eleger.", aptos.filter((c) => c.posicao > vagas + faixa && c.chance === "Baixa"), true],
+    ["Chance muito baixa", "Estão longe das vagas, e o voto neles ajuda principalmente a lista. Aqui, cerca de 1 em cada 100 se elege.", aptos.filter((c) => c.chance === "Muito baixa" && !(vagas && c.posicao <= vagas + faixa)), false],
+    ["Candidatura com problema", "O registro foi negado ou cancelado, e o voto pode não valer.", problema, false],
+  ].filter(([, , lista]) => lista.length);
+  const m = margemLista(g);
+  const ind = indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id] : null;
+  const perfil = perfisAtual?.[g.id];
+  return `<header class="lista-dlg-cab">
+      <div><h2>${esc(agremiacao(g.id))}</h2>
+        <p>${aptos.length} candidatos disputam ${g.vagas === 1 ? "a vaga estimada" : `as ${g.vagas} vagas estimadas`}. Em 2022, esta lista teve ${pct.format(g.percentual)} dos votos.</p></div>
+      <button type="button" class="fechar" data-fechar-lista aria-label="Fechar">✕</button>
+    </header>
+    <div class="lista-dlg-rolagem">
+      <section class="analise-lista">
+        <div class="analise-numeros">
+          <div class="lista-num"><strong>${g.vagas}</strong><span>${g.vagas === 1 ? "vaga" : "vagas"}</span></div>
+          <div class="lista-num nota"><strong>${ind?.indice ?? "—"}</strong><span>nota</span></div>
+          ${linhaAfinidadeLista(g)}
+        </div>
+        ${ind ? htmlIndicadores(ind) : `<p class="explica">As notas ainda estão sendo calculadas.</p>`}
+        ${perfil ? `<p class="analise-texto">${textoPerfil(perfil)}</p>` : ""}
+        ${m.texto ? `<p class="analise-texto">${m.tag} ${m.texto}</p>` : ""}
+        ${htmlQuemEntraria(g, ind, aptos.filter((c) => c.posicao <= vagas))}
+      </section>
+      ${grupos.map(([titulo, expl, lista, aberto]) => `<details class="faixa-lista"${aberto ? " open" : ""}>
+        <summary><strong>${titulo}</strong> <span class="contador">${lista.length}</span><small>${expl}</small></summary>
+        <ul class="cand-linhas">${lista.map((c) => linhaCandidato(c, g, item)).join("")}</ul>
+      </details>`).join("")}
+      <p class="nota-pequena">A ordem segue a força de cada candidato, que junta a maior votação recente (para deputado em 2022 ou para vereador ou prefeito em 2024) e o dinheiro arrecadado em 2026. Clique no nome para abrir a ficha completa.</p>
+    </div>`;
+}
+
+(function ligarListas() {
+  // Cartão clicável também abre com Enter ou espaço (acessibilidade).
+  document.addEventListener("keydown", (e) => {
+    const card = e.target.closest?.(".lista-card.clicavel");
+    if (card && e.target === card && (e.key === "Enter" || e.key === " ")) {
+      e.preventDefault();
+      abrirLista(card.dataset.abrirLista);
+    }
+  });
+  document.addEventListener("click", (e) => {
+    document.querySelectorAll("details.info-balao[open]").forEach((d) => { if (!d.contains(e.target)) d.open = false; });
+  });
+  document.addEventListener("click", async (e) => {
+    const ficha = e.target.closest("[data-ficha-lista]");
+    if (ficha && listasAtual) return abrirFicha(listasAtual.item.cargo, +ficha.dataset.fichaLista);
+    const abrir = e.target.closest("[data-abrir-lista]");
+    if (abrir) return abrirLista(abrir.dataset.abrirLista);
+    const dlg = $("#lista-dlg");
+    if (e.target === dlg || e.target.closest("[data-fechar-lista]")) return dlg.close();
+    const por = e.target.closest("[data-lista-cedula],[data-lista-retirar]");
+    if (por && listasAtual) {
+      const { item } = listasAtual;
+      const idGrupo = dlg.dataset.grupo;
+      if (por.dataset.listaRetirar) retirarVoto(item.slot);
+      else {
+        const r = await api(`/api/ranking?uf=${estado.uf}&cargo=${item.cargo}&grupo=${encodeURIComponent(idGrupo)}`);
+        const c = r.candidatos.find((x) => x.id === +por.dataset.listaCedula);
+        escolher(slots.find((s) => s.key === item.slot), { ...c, coligacao: idGrupo });
+      }
+      abrirLista(idGrupo);
+      desenharListas();
+    }
+  });
+})();

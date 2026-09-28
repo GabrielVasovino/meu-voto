@@ -1,0 +1,12 @@
+# Dados pessoais: login, cédula e chave do Portal
+dados/
+
+# Endereço do túnel público (muda a cada publicação)
+endereco-publico.txt
+
+# Arquivos gerados pelo Python
+__pycache__/
+*.pyc
+
+# Configuração local do Claude Code
+.claude/
