@@ -1,4 +1,4 @@
-"""Login do Meu Voto: um usuário, senha com PBKDF2 e sessões por cookie.
+"""Login do Voto Informado: um usuário, senha com PBKDF2 e sessões por cookie.
 
 Tudo fica em dados/login.json. A senha nunca é gravada, só o hash com sal; as
 sessões também são gravadas como hash, então quem ler o arquivo não consegue

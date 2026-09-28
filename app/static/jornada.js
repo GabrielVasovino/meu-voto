@@ -288,7 +288,7 @@ async function desenharGuia() {
   const etapa = guia.etapa;
   let html = "";
   if (etapa === 0) {
-    html = `<h2 id="guia-titulo">Boas-vindas ao Meu Voto</h2>
+    html = `<h2 id="guia-titulo">Boas-vindas ao Voto Informado</h2>
       <p>Em poucos minutos você monta a sua cédula para 4 de outubro e entende o que cada voto faz. O caminho é este:</p>
       <ol class="guia-roteiro">
         <li>Você diz em que estado vota.</li>

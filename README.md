@@ -1,4 +1,4 @@
-# Meu Voto 2026
+# Voto Informado 2026
 
 Site para montar sua cédula das eleições de 2026, conhecer os candidatos e
 comparar opções com dados públicos: TSE, Câmara dos Deputados, ALESP, Receita

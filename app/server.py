@@ -1,4 +1,4 @@
-"""Meu Voto 2026: servidor local.
+"""Voto Informado 2026: servidor local.
 
 Serve a interface em http://127.0.0.1:8765 e faz a ponte com os dados do TSE.
 A cédula fica salva só neste computador, em dados/cedula.json.
@@ -484,7 +484,7 @@ class ServidorTailscale(ThreadingHTTPServer):
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Meu Voto 2026 (servidor local)")
+    ap = argparse.ArgumentParser(description="Voto Informado 2026 (servidor local)")
     ap.add_argument("--porta", type=int, default=8765)
     ap.add_argument("--sem-navegador", action="store_true")
     ap.add_argument("--tailscale", action="store_true", help="aceita aparelhos da sua rede Tailscale")
@@ -513,7 +513,7 @@ def main():
         sys.exit(f"A porta {args.porta} já está em uso. O app já está aberto? Tente --porta 8766.")
 
     endereco = f"http://127.0.0.1:{args.porta}"
-    print(f"Meu Voto 2026 rodando em {endereco}  (Ctrl+C para encerrar)")
+    print(f"Voto Informado 2026 rodando em {endereco}  (Ctrl+C para encerrar)")
     if args.tailscale:
         print(f"No tablet (com o Tailscale ligado): http://{socket.gethostname().lower()}:{args.porta}")
     if not args.sem_navegador:

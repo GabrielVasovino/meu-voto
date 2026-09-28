@@ -1,4 +1,4 @@
-"""Coloca a versão pública do Meu Voto na internet a partir deste computador, de graça.
+"""Coloca a versão pública do Voto Informado na internet a partir deste computador, de graça.
 
 Sobe o servidor em modo público (sem login, sem guardar votos) na porta 8780, só para este computador,
 e abre um túnel da Cloudflare (cloudflared) que dá um endereço público *.trycloudflare.com.
@@ -68,7 +68,7 @@ def main():
                     endereco = m.group(0)
                     ARQ_ENDERECO.write_text(endereco + "\n", encoding="utf-8")
                     print("\n" + "=" * 64)
-                    print(f"  Meu Voto público no ar: {endereco}")
+                    print(f"  Voto Informado público no ar: {endereco}")
                     print("  Mande esse endereço para quem vai testar. Deixe esta janela aberta.")
                     print("  O endereço também ficou salvo em endereco-publico.txt.")
                     print("=" * 64 + "\n", flush=True)
