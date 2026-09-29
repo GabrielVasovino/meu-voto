@@ -1,0 +1,48 @@
+name: Deploy Voto Informado OCI
+
+on:
+  push:
+   branches: [main]
+  workflow_dispatch: 
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh0action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_VM_IP }}
+          username: ${{ secrets.ORACLE_VM_USER }}
+          key: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}
+          passphrase: ${{ secrets.ORACLE_SSH_PASSPHRASE }}
+          port: 22
+          script: |
+            set -e
+
+            echo "iniciando o deploy no servidor..."
+
+            if [ ! -d "meu-voto" ]; then 
+              echo "Clonando repositorio meu-voto..."
+              git clone git@github.com:GabrielVasovino/meu-voto.git meu-voto
+            fi
+
+            cd meu-voto
+
+            echo "Puxando úlçtimas alterações da branch main..."
+            git fetch origin
+            git reset -- hard origin/main
+
+            echo "Reconstruindo e subindo os containers..."
+            docker compose up -d --build
+
+            echo "Limpando imagens antigas..."
+            docker image prune -f
+
+            echo "Deploy concluído com sucesso!"
+            docker compose ps
