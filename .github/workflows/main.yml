@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Deploy via SSH
-        uses: appleboy/ssh0action@v1.0.3
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.ORACLE_VM_IP }}
           username: ${{ secrets.ORACLE_VM_USER }}
