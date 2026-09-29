@@ -34,7 +34,7 @@ jobs:
 
             cd meu-voto
 
-            echo "Puxando úlçtimas alterações da branch main..."
+            echo "Puxando últimas alterações da branch main..."
             git fetch origin
             git reset --hard origin/main
 
