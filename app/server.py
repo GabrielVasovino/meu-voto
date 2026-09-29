@@ -243,6 +243,12 @@ class Handler(BaseHTTPRequestHandler):
                 if g is None:
                     raise ErroPedido(404, "Federação ou partido não encontrado")
                 return self._json(200, g)
+            if url.path == "/api/rede_lista":
+                uf, cargo = self._uf_proporcional(qs)
+                r = analise.rede_lista(uf, cargo, _param(qs, "grupo") or "")
+                if r is None:
+                    raise ErroPedido(404, "Federação ou partido não encontrado")
+                return self._json(200, r)
             if url.path == "/api/quiz":
                 return self._json(200, self._quiz(_uf(qs)))
             if url.path == "/api/gastos/status":

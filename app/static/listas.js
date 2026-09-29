@@ -397,6 +397,7 @@ async function abrirLista(idGrupo) {
   }
   dlg.dataset.grupo = idGrupo;
   $("#lista-dlg-corpo").innerHTML = htmlListaCompleta(g, r, item);
+  carregarRedeLista(idGrupo, item);
 }
 
 // "Eleito por QP" -> "foi eleito", e assim por diante.
@@ -493,12 +494,47 @@ function htmlListaCompleta(g, r, item) {
         ${m.texto ? `<p class="analise-texto">${m.tag} ${m.texto}</p>` : ""}
         ${htmlQuemEntraria(g, ind, aptos.filter((c) => c.posicao <= vagas))}
       </section>
+      <section class="rede-lista-sec" id="rede-lista"><p class="carregando">Cruzando o dinheiro entre os candidatos da lista…</p></section>
       ${grupos.map(([titulo, expl, lista, aberto]) => `<details class="faixa-lista"${aberto ? " open" : ""}>
         <summary><strong>${titulo}</strong> <span class="contador">${lista.length}</span><small>${expl}</small></summary>
         <ul class="cand-linhas">${lista.map((c) => linhaCandidato(c, g, item)).join("")}</ul>
       </details>`).join("")}
       <p class="nota-pequena">A ordem segue a força de cada candidato, que junta a maior votação recente (para deputado em 2022 ou para vereador ou prefeito em 2024) e o dinheiro arrecadado em 2026. Clique no nome para abrir a ficha completa.</p>
     </div>`;
+}
+
+// ---------- dinheiro entre candidatos da lista (diálogo) ----------
+
+async function carregarRedeLista(idGrupo, item) {
+  let r;
+  try {
+    r = await api(`/api/rede_lista?uf=${estado.uf}&cargo=${item.cargo}&grupo=${encodeURIComponent(idGrupo)}`);
+  } catch {
+    r = null;
+  }
+  const alvo = $("#rede-lista");
+  if (!alvo || $("#lista-dlg").dataset.grupo !== idGrupo) return;
+  if (!r?.pronto) { alvo.remove(); return; }
+  const rp = r.repasses;
+  const empresas = r.empresas.length ? `<ul class="rede-lista">${r.empresas.map((e) => `<li class="rede-item">
+      <div class="rede-topo">
+        <span><strong>${esc(nomeProprio(e.empresa || e.cnpj))}</strong>
+          <small>Empresa de <button type="button" class="link-btn" data-ficha-lista="${e.dono.id}">${esc(nomeProprio(e.dono.nomeUrna))}</button> (${esc(e.dono.partido || "")})</small></span>
+        <span class="rede-valor">${brlCompacto.format(e.total)}<small>de ${e.quantas} ${e.quantas === 1 ? "campanha" : "campanhas"}${e.daLista ? `, ${e.daLista} desta lista` : ""}</small></span>
+      </div>
+      <div class="chips">${e.porPartido.slice(0, 5).map(([p, n]) => `<span class="chip">${esc(p)}: ${n}</span>`).join("")}</div>
+      <button type="button" class="link-acao link-inline" data-empresa="${esc(e.cnpj)}">Ver a ficha da empresa</button>
+    </li>`).join("")}</ul>${r.totalEmpresas > r.empresas.length ? `<p class="nota-pequena">E mais ${r.totalEmpresas - r.empresas.length} com valores menores.</p>` : ""}`
+    : `<p class="explica">Nenhuma empresa de candidatos desta lista recebeu de outras campanhas.</p>`;
+  const repasses = rp.total ? `<p class="rede-texto">Os candidatos da lista receberam ${brlCompacto.format(rp.total)} de outros candidatos, e ${pct.format(rp.publico / rp.total)} disso é dinheiro do Fundo Eleitoral ou do Fundo Partidário${rp.daLista ? `; ${brlCompacto.format(rp.daLista)} veio de colegas da própria lista` : ""}. Quem mais repassou:</p>
+      <ul class="lista-simples">${rp.doadores.map((d) => `<li>${esc(nomeProprio(d.nome || "candidato"))} (${esc(d.partido || "")}${d.cargo ? `, ${esc(d.cargo.toLowerCase())}` : ""}): ${brlCompacto.format(d.valor)}</li>`).join("")}</ul>`
+    : `<p class="explica">Os candidatos desta lista não receberam repasses de outros candidatos.</p>`;
+  alvo.innerHTML = `<h3>Dinheiro entre candidatos</h3>
+    <h4 class="rede-sub">Empresas de candidatos da lista pagas por outras campanhas</h4>
+    ${empresas}
+    <h4 class="rede-sub">Repasses de outros candidatos</h4>
+    ${repasses}
+    <p class="nota-pequena">Repassar o Fundo Eleitoral entre candidatos do mesmo partido é permitido e comum: é assim que o partido divide o dinheiro. Já a empresa de um candidato que recebe de muitas campanhas vale uma olhada, porque também é um caminho para o dinheiro de campanha chegar a um aliado. Os sócios vêm da Receita Federal.</p>`;
 }
 
 (function ligarListas() {

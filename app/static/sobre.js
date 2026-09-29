@@ -70,6 +70,13 @@ function htmlSobreMetodologia() {
       <li><strong>Empresa do candidato recebeu de outras campanhas ou de emendas:</strong> o outro lado do mesmo cruzamento, somando também as emendas parlamentares pagas a ela.</li>
     </ul>
     <p>O cruzamento é refeito todo mês, quando a Receita publica novos dados. Como usa nome e parte do CPF, pode raramente juntar duas pessoas diferentes com o mesmo nome; por isso cada aviso mostra a empresa e o sócio, para conferir.</p>
+    <h3>Dinheiro que circula entre campanhas</h3>
+    <ul>
+      <li><strong>Doador que recebeu mais do que doou:</strong> quando alguém doou R$ 5 mil ou mais para a campanha e depois recebeu dela, como pagamento, mais do que doou. Tira pontos, porque é um jeito de o dinheiro doado voltar para quem doou, embora também aconteça com gente da equipe.</li>
+      <li><strong>Doadores de muitos candidatos:</strong> quem doou para 5 candidatos ou mais aparece na aba Dinheiro, com os partidos. Só informa.</li>
+      <li><strong>Emenda e campanha na mesma empresa:</strong> quando uma empresa recebeu emenda indicada pelo próprio deputado e depois foi paga pela campanha dele. Só informa, e plataformas e grandes empresas ficam de fora.</li>
+      <li><strong>Repasses entre candidatos:</strong> dividir o Fundo Eleitoral entre candidatos do mesmo partido é permitido e comum, e aparece só como contexto.</li>
+    </ul>
     <h3>Desempenho no mandato</h3>
     <p>Vale só para quem já é deputado federal ou deputado estadual de São Paulo, que são as casas com dados abertos completos. Em cada critério, a pessoa é comparada com os colegas da mesma casa e recebe uma posição de 0 a 100, em que 50 é o deputado típico. O desempenho é a média dessas posições.</p>
     <ul>

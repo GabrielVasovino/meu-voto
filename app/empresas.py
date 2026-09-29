@@ -316,6 +316,68 @@ def _por_prefixo(c, sql, basico):
     return c.execute(sql, (basico, basico + ":")).fetchall()
 
 
+TTL_INFO = 7 * 24 * tse.HORA
+_info = {"dados": None, "lido": 0}
+
+
+def _info_candidatos():
+    """sq_candidato -> nome, partido, UF, cargo e número de todos os candidatos de 2026, pelo arquivo do TSE (guardado
+    por uma semana). O banco de gastos só tem quem já declarou contas; sem isto, o dono de uma empresa que ainda não
+    declarou nada sumia dos avisos."""
+    arq = _pasta() / "candidatos2026.json"
+    if _info["dados"] is not None and time.time() - _info["lido"] < TTL_INFO:
+        return _info["dados"]
+    dados = None
+    if arq.exists() and time.time() - arq.stat().st_mtime < TTL_INFO:
+        dados = json.loads(arq.read_text(encoding="utf-8"))
+    else:
+        try:
+            dados = {r["SQ_CANDIDATO"]: {"nome": r["NM_CANDIDATO"], "partido": r["SG_PARTIDO"], "uf": r["SG_UF"],
+                                         "cargo": int(r["CD_CARGO"]), "numero": r["NR_CANDIDATO"]}
+                     for r in zipremoto.linhas_csv(URL_CAND_2026, "consulta_cand_2026_BRASIL.csv")}
+            tmp = arq.with_suffix(".tmp")
+            tmp.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+            tmp.replace(arq)
+        except Exception as e:  # noqa: BLE001 - sem o arquivo do TSE, usa a cópia antiga ou só o banco de gastos
+            print(f"[{__name__}] sem a lista de candidatos do TSE: {e}", file=sys.stderr)
+            dados = json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else {}
+    _info.update(dados=dados, lido=time.time())
+    return dados
+
+
+def _pessoa(c, sq):
+    """Dados de um candidato de 2026: do banco de gastos ou, se ele ainda não declarou contas, da lista do TSE."""
+    r = c.execute("SELECT nome, numero, uf, cargo, partido FROM candidatos WHERE sq_candidato = ?", (int(sq),)).fetchone()
+    if r:
+        return dict(r, sq=str(sq))
+    x = _info_candidatos().get(str(sq))
+    return dict(x, sq=str(sq)) if x else None
+
+
+def _campanhas_que_pagam(c, basico):
+    """Todas as campanhas de 2026 que pagaram a empresa (pelos 8 primeiros dígitos do CNPJ), da que mais pagou para a
+    que menos."""
+    return [dict(x) for x in _por_prefixo(c, """SELECT d.sq_candidato, sum(d.valor) valor, max(d.partido) partido,
+                   max(c.nome) nome, max(c.uf) uf, max(c.cargo) cargo, max(c.numero) numero
+                   FROM despesas d LEFT JOIN candidatos c ON c.sq_candidato = d.sq_candidato
+                   WHERE d.doc >= ? AND d.doc < ? GROUP BY d.sq_candidato ORDER BY valor DESC""", basico)]
+
+
+def _por_partido(campanhas):
+    """[[partido, quantas campanhas, quanto pagaram]], do partido que mais aparece para o que menos."""
+    soma = {}
+    for x in campanhas:
+        a = soma.setdefault(x.get("partido") or "?", [0, 0.0])
+        a[0] += 1
+        a[1] += x["valor"] or 0
+    return sorted(([p, n, v] for p, (n, v) in soma.items()), key=lambda t: (-t[1], -t[2]))
+
+
+def _rede(outras):
+    return {"quantas": len(outras), "total": sum(x["valor"] or 0 for x in outras), "porPartido": _por_partido(outras),
+            "principais": [{k: x.get(k) for k in ("nome", "partido", "uf", "cargo", "numero", "valor")} for x in outras[:8]]}
+
+
 def cruzamentos(sq_candidato):
     """Empresas do candidato com o que o dinheiro público e de campanha diz delas: quanto esta campanha e as outras
     pagaram, emendas recebidas e sanções. None se o índice ainda não existe."""
@@ -335,14 +397,9 @@ def cruzamentos(sq_candidato):
             b = r["basico"]
             e = dict(r, cnpj=cnpj_matriz(b))
             if cg:
-                linhas = _por_prefixo(cg, """SELECT d.sq_candidato, sum(d.valor) valor, max(c.nome) nome, max(c.partido) partido,
-                           max(c.uf) uf FROM despesas d LEFT JOIN candidatos c ON c.sq_candidato = d.sq_candidato
-                           WHERE d.doc >= ? AND d.doc < ? GROUP BY d.sq_candidato ORDER BY valor DESC""", b)
-                propria = sum(x["valor"] for x in linhas if x["sq_candidato"] == sq)
-                outras = [dict(x) for x in linhas if x["sq_candidato"] != sq]
-                e["campanhaPropria"] = propria
-                e["outrasCampanhas"] = {"total": sum(x["valor"] for x in outras), "quantas": len(outras),
-                                        "principais": [{k: x[k] for k in ("nome", "partido", "uf", "valor")} for x in outras[:5]]}
+                linhas = _campanhas_que_pagam(cg, b)
+                e["campanhaPropria"] = sum(x["valor"] for x in linhas if x["sq_candidato"] == sq)
+                e["outrasCampanhas"] = _rede([x for x in linhas if x["sq_candidato"] != sq])
             if ce:
                 linhas = _por_prefixo(ce, """SELECT autor, sum(valor) valor FROM favorecidos WHERE doc >= ? AND doc < ?
                                              GROUP BY autor ORDER BY valor DESC""", b)
@@ -378,13 +435,11 @@ def fornecedores_de_candidatos(sq_candidato):
             donos = _indice["donos"].get(basico, set()) - {sq}
             if not donos:
                 continue
-            pessoas = []
-            for d in donos:
-                cand = c.execute("SELECT nome, numero, uf, cargo, partido FROM candidatos WHERE sq_candidato = ?", (int(d),)).fetchone()
-                if cand:
-                    pessoas.append(dict(cand, sq=d))
+            pessoas = [p for p in (_pessoa(c, d) for d in donos) if p]
             if pessoas:
-                saida.append(dict(x, basico=basico, donos=pessoas))
+                # A rede: quais outras campanhas também pagam a mesma empresa, e de que partidos.
+                outras = [y for y in _campanhas_que_pagam(c, basico) if str(y["sq_candidato"]) != sq]
+                saida.append(dict(x, basico=basico, donos=pessoas, rede=_rede(outras)))
     finally:
         c.close()
     return sorted(saida, key=lambda x: -x["valor"])

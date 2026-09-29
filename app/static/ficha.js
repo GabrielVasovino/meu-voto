@@ -1127,10 +1127,10 @@ function painelDinheiro() {
   if (!c && (!g || g.semDados)) {
     return `<p class="painel-intro">Ainda não há prestação de contas publicada pelo TSE para esta candidatura.</p>`;
   }
-  const opcoes = [["geral", "Visão geral"], ["origem", "De onde vem"], ["destino", "Para onde vai"], ["fornecedores", "Fornecedores"], ["outras", "Outras campanhas"]];
+  const opcoes = [["geral", "Visão geral"], ["origem", "De onde vem"], ["destino", "Para onde vai"], ["fornecedores", "Fornecedores"], ["ligacoes", "Ligações com candidatos"], ["outras", "Outras campanhas"]];
   const sub = ficha.sub.dinheiro;
   const intro = `<p class="painel-intro">Quanto a campanha arrecadou, de onde veio o dinheiro, com o que foi gasto e quem recebeu. São os valores declarados ao TSE, que ainda mudam até o fim da campanha.</p>`;
-  const corpo = { geral: dinheiroGeral, origem: dinheiroOrigem, destino: dinheiroDestino, fornecedores: dinheiroFornecedores, outras: dinheiroOutras }[sub](c, g);
+  const corpo = { geral: dinheiroGeral, origem: dinheiroOrigem, destino: dinheiroDestino, fornecedores: dinheiroFornecedores, ligacoes: dinheiroLigacoes, outras: dinheiroOutras }[sub](c, g);
   return intro + subnav("dinheiro", opcoes) + corpo;
 }
 
@@ -1170,7 +1170,7 @@ function dinheiroGeral(c, g) {
     "Desde 2018, o dinheiro público é a principal fonte da maioria das campanhas. Quem decide quanto cada candidato recebe é a direção do partido."));
 }
 
-function dinheiroOrigem(c) {
+function dinheiroOrigem(c, g) {
   if (!c) return `<p class="explica">Sem receitas declaradas ainda.</p>`;
   const origens = [...c.origens].sort((x, y) => y.valor - x.valor).map((o) => ({ nome: o.origem, valor: o.valor }));
   const total = c.totalRecebido || 0;
@@ -1193,7 +1193,39 @@ function dinheiroOrigem(c) {
   const doadores = c.doadores.length ? `<p style="margin-top:16px">Quem mais doou:</p>
     <ul class="bens-topo">${c.doadores.slice(0, 5).map((p) => `<li><span>${esc(p.nome)}<small>${p.qtd === 1 ? "Uma doação" : `${p.qtd} doações`}</small></span><strong>${esc(brlCompacto.format(p.valor))}</strong></li>`).join("")}</ul>` : "";
   return secao("De onde vem o dinheiro", `${origens.length ? barras(origens, total) : `<p class="explica">Ainda não há receitas declaradas.</p>`}${doadores}`,
-    leitura(tom, texto, "Empresas não podem doar para campanhas desde 2015, e cada pessoa pode doar até 10% da própria renda."));
+    leitura(tom, texto, "Empresas não podem doar para campanhas desde 2015, e cada pessoa pode doar até 10% da própria renda."))
+    + (g?.pronto && !g.semDados ? htmlDoadoresRede(g) + htmlDoouERecebeu(g) : "");
+}
+
+// Quem doou para esta campanha e também para muitos outros candidatos. Só informa: grandes doadores costumam
+// apoiar vários candidatos, às vezes de partidos diferentes.
+function htmlDoadoresRede(g) {
+  const lista = g.doadoresRede || [];
+  if (!lista.length) return "";
+  return secao("Doadores que também apoiam muitos candidatos", `<ul class="rede-lista">${lista.slice(0, 8).map((d) => `<li class="rede-item">
+      <div class="rede-topo">
+        <span><strong>${esc(nomeProprio(d.nome))}</strong><small>Doou para ${d.candidatos} candidatos de ${d.partidos} ${d.partidos === 1 ? "partido" : "partidos"} em 2026, somando ${brlCompacto.format(d.total)}.</small></span>
+        <span class="rede-valor">${brlCompacto.format(d.aqui)}<small>para esta campanha</small></span>
+      </div>
+      <div class="chips">${d.siglas.map((p) => `<span class="chip">${esc(p)}</span>`).join("")}</div>
+    </li>`).join("")}</ul>`,
+  leitura("neutro", `${lista.length === 1 ? "Uma pessoa que doou" : `${lista.length} pessoas que doaram`} para esta campanha também ${lista.length === 1 ? "doou" : "doaram"} para 5 candidatos ou mais.`,
+    "Não é problema: grandes doadores costumam apoiar vários candidatos. Serve para ver quem está por trás de várias campanhas ao mesmo tempo, às vezes de partidos diferentes."));
+}
+
+// Pessoas que doaram e também foram pagas pela campanha.
+function htmlDoouERecebeu(g) {
+  const lista = g.doouERecebeu || [];
+  if (!lista.length) return "";
+  const forte = (x) => x.doou >= 5000 && x.recebeu > x.doou;
+  const fortes = lista.filter(forte).length;
+  return secao("Doaram e também foram pagos pela campanha", `<ul class="lista-simples">${lista.slice(0, 10).map((x) =>
+      `<li>${esc(nomeProprio(x.nome))} doou ${brlCompacto.format(x.doou)} e recebeu ${brlCompacto.format(x.recebeu)}${forte(x) ? ` <span class="badge warn">recebeu mais do que doou</span>` : ""}</li>`).join("")}</ul>
+      ${lista.length > 10 ? `<p class="nota-pequena">E mais ${lista.length - 10} pessoas com valores menores.</p>` : ""}`,
+  leitura(fortes ? "atencao" : "neutro",
+    fortes ? `${fortes === 1 ? "Uma pessoa doou" : `${fortes} pessoas doaram`} R$ 5 mil ou mais e depois ${fortes === 1 ? "recebeu" : "receberam"} da campanha mais do que ${fortes === 1 ? "doou" : "doaram"}. Isso tira pontos da integridade.`
+      : "Ninguém doou valor alto e recebeu de volta mais do que doou.",
+    "É comum alguém da equipe doar um pouco e receber pelo trabalho. O que chama atenção é a doação alta voltar maior, porque também é um jeito de o dinheiro doado voltar para quem doou."));
 }
 
 function dinheiroDestino(c, g) {
@@ -1249,6 +1281,66 @@ function dinheiroFornecedores(c, g) {
     com ? `${com === 1 ? "Um fornecedor tem" : `${com} fornecedores têm`} algo que vale conferir. O motivo aparece na coluna Leitura.` : "Nenhum dos maiores fornecedores tem sinal forte.",
     "Um fornecedor estabelecido costuma atender várias campanhas, de partidos diferentes, e já trabalhava em 2022. Os casos que merecem atenção são MEI recebendo acima do limite, empresa aberta dias antes da campanha, CNPJ inativo e sócio ligado ao candidato."),
   "", true);
+}
+
+// Empresas de outros candidatos que esta campanha pagou e empresas deste candidato pagas por outras campanhas,
+// com a rede de cada uma: quantas campanhas pagam a mesma empresa e de que partidos.
+const NOME_CARGO = { 1: "presidente", 2: "vice-presidente", 3: "governador", 4: "vice-governador", 5: "senador",
+  6: "deputado federal", 7: "deputado estadual", 8: "deputado distrital", 9: "1º suplente de senador", 10: "2º suplente de senador" };
+
+function chipsPartidos(porPartido) {
+  return `<div class="chips">${(porPartido || []).slice(0, 6).map(([p, n, v]) =>
+    `<span class="chip" title="${esc(brlCompacto.format(v))}">${esc(p)}: ${n} ${n === 1 ? "campanha" : "campanhas"}</span>`).join("")}</div>`;
+}
+
+function dinheiroLigacoes() {
+  const a = ficha.a;
+  if (!a) return esqueleto("Cruzando as empresas dos candidatos com as despesas de todas as campanhas…");
+  const r = a.rede;
+  if (!r?.pronto && !r?.minhas?.length) {
+    return `<p class="explica">O cruzamento com os sócios de empresas da Receita Federal ainda não está disponível.</p>`;
+  }
+  const pagas = r.pagas || [];
+  const minhas = r.minhas || [];
+  const nome = esc(nomeProprio(ficha.f.nomeUrna));
+  const blocoPagas = pagas.length ? `<ul class="rede-lista">${pagas.map((f) => {
+      const rede = f.rede || {};
+      return `<li class="rede-item">
+        <div class="rede-topo">
+          <span><strong>${esc(nomeProprio(f.nome || ""))}</strong>
+            <small>Sócio(a): ${f.donos.map((d) => `${esc(nomeProprio(d.nome))} (${esc(d.partido)}, ${esc(NOME_CARGO[d.cargo] || "candidato")} em ${esc(d.uf)})`).join("; ")}</small></span>
+          <span class="rede-valor">${brlCompacto.format(f.valor)}<small>desta campanha</small></span>
+        </div>
+        ${rede.quantas ? `<p class="rede-texto">A mesma empresa também recebeu ${brlCompacto.format(rede.total)} de ${rede.quantas === 1 ? "outra campanha" : `outras ${rede.quantas} campanhas`}:</p>${chipsPartidos(rede.porPartido)}`
+          : `<p class="rede-texto">Nenhuma outra campanha pagou esta empresa.</p>`}
+        <button type="button" class="link-acao link-inline" data-empresa="${esc(f.cnpj)}">Ver a ficha da empresa</button>
+      </li>`;
+    }).join("")}</ul>`
+    : `<p class="explica">Esta campanha não pagou empresas de outros candidatos de 2026.</p>`;
+  const blocoMinhas = minhas.length ? `<ul class="rede-lista">${minhas.map((e) => {
+      const o = e.outrasCampanhas;
+      return `<li class="rede-item">
+        <div class="rede-topo">
+          <span><strong>${esc(nomeProprio(e.razao || e.cnpj))}</strong><small>${esc(e.atividade || "")}</small></span>
+          <span class="rede-valor">${brlCompacto.format(o.total)}<small>de ${o.quantas} ${o.quantas === 1 ? "campanha" : "campanhas"}</small></span>
+        </div>
+        ${chipsPartidos(o.porPartido)}
+        ${o.principais?.length ? `<p class="rede-texto">As que mais pagaram: ${listaNatural(o.principais.slice(0, 4).map((x) => `${esc(nomeProprio(x.nome || "candidato"))} (${esc(x.partido)}, ${brlCompacto.format(x.valor)})`))}.</p>` : ""}
+        <button type="button" class="link-acao link-inline" data-empresa="${esc(e.cnpj)}">Ver a ficha da empresa</button>
+      </li>`;
+    }).join("")}</ul>`
+    : `<p class="explica">Nenhuma empresa de ${nome} recebeu de outras campanhas.</p>`;
+  const muitas = [...pagas.map((f) => f.rede?.quantas || 0), ...minhas.map((e) => e.outrasCampanhas.quantas)].some((n) => n >= 5);
+  return secao("Empresas de outros candidatos pagas por esta campanha", blocoPagas,
+    leitura(pagas.length ? "atencao" : "ok",
+      pagas.length ? `Esta campanha pagou ${pagas.length === 1 ? "uma empresa" : `${pagas.length} empresas`} de quem também disputa a eleição. Quando a mesma empresa recebe de várias campanhas, principalmente do mesmo partido, vale olhar com mais calma.`
+        : "Nenhum dinheiro desta campanha foi para empresas de outros candidatos.",
+      "Pode ser um serviço comum, como um escritório de advocacia ou de contabilidade que o partido contrata para todos. Mas também é um caminho para o dinheiro de campanha chegar a um aliado. Tira pontos da integridade quando a campanha pagou R$ 10 mil ou mais, ou 10% dos gastos.")) +
+    secao(`Empresas de ${nome} pagas por outras campanhas`, blocoMinhas,
+      leitura(minhas.length ? (muitas ? "atencao" : "info") : "ok",
+        minhas.length ? `${minhas.length === 1 ? "Uma empresa" : `${minhas.length} empresas`} de ${nome} recebeu dinheiro de outras campanhas de 2026${muitas ? ", uma delas de 5 campanhas ou mais" : ""}.`
+          : `Nenhuma empresa de ${nome} recebeu de outras campanhas.`,
+        "Os sócios vêm dos dados abertos da Receita Federal, cruzados com os candidatos pelo nome e por parte do CPF. Tira pontos quando as outras campanhas pagaram R$ 10 mil ou mais."));
 }
 
 function dinheiroOutras(c, g) {

@@ -670,6 +670,8 @@ def analisar_candidato(sq_candidato, ficha_nome=None, max_receita=15, nome_urna=
             (*docs, cand["partido"], cand["uf"])).fetchone()[0] >= 10
         sinais = _sinais_candidato(cand, total, total_pj, ordenados, composicao, mediana_total, por_pessoa,
                                    compartilhados, receitas_total, receita_fefc, plataformas, coletivo, agencia_partido)
+        voltou = _doou_e_recebeu(c, sq_candidato)
+        sinais += _sinais_doou_e_recebeu(voltou)
         return {
             "pronto": True,
             "geradoEm": status()["geradoEm"],
@@ -691,6 +693,8 @@ def analisar_candidato(sq_candidato, ficha_nome=None, max_receita=15, nome_urna=
             "compartilhados": compartilhados,
             "repasses": {"enviados": enviados, "recebidos": recebidos},
             "sinais": sinais,
+            "doouERecebeu": voltou,
+            "doadoresRede": _doadores_rede(c, sq_candidato),
         }
     finally:
         c.close()
@@ -803,3 +807,63 @@ def _panorama(uf, limite):
         return {"pronto": True, "geradoEm": status()["geradoEm"], "uf": uf, "totalUf": total_uf, "fornecedores": saida}
     finally:
         c.close()
+
+
+# ---------- doadores ----------
+
+# Doação de pessoa física que não é do próprio candidato (recursos próprios ficam de fora).
+_DOACAO_PF = "length(doc) = 11 AND origem NOT LIKE '%rópri%' AND origem NOT LIKE '%ropri%'"
+DOOU_MINIMO = 5_000
+
+
+def _doou_e_recebeu(c, sq_candidato):
+    """Pessoas que doaram para a campanha e também foram pagas por ela (pelo CPF, que não sai daqui)."""
+    doacoes = {r["doc"]: (r["nome"], r["v"]) for r in c.execute(
+        f"SELECT doc, max(nome) nome, sum(valor) v FROM receitas WHERE sq_candidato = ? AND {_DOACAO_PF} GROUP BY doc",
+        (sq_candidato,))}
+    if not doacoes:
+        return []
+    saida = []
+    for r in c.execute("SELECT doc, sum(valor) v FROM despesas WHERE sq_candidato = ? AND length(doc) = 11 GROUP BY doc",
+                       (sq_candidato,)):
+        if r["doc"] in doacoes:
+            nome, doou = doacoes[r["doc"]]
+            saida.append({"nome": nome, "doou": doou, "recebeu": r["v"]})
+    return sorted(saida, key=lambda x: -x["recebeu"])
+
+
+def _sinais_doou_e_recebeu(lista):
+    """Vale conferir só quando a doação foi relevante (R$ 5 mil ou mais) e a pessoa recebeu de volta mais do que doou.
+    Doar pouco e trabalhar na campanha é comum; o padrão que chama atenção é o dinheiro voltar maior."""
+    fortes = [x for x in lista if x["doou"] >= DOOU_MINIMO and x["recebeu"] > x["doou"]]
+    if not fortes:
+        return []
+    exemplos = "; ".join(f"{x['nome'].title()} doou R$ {_milhar(x['doou'])} e recebeu R$ {_milhar(x['recebeu'])}"
+                         for x in fortes[:3])
+    quem = "Uma pessoa doou" if len(fortes) == 1 else f"{len(fortes)} pessoas doaram"
+    return [{"nivel": "atencao", "titulo": "Doador recebeu da campanha mais do que doou",
+             "detalhe": f"{quem} R$ {_milhar(DOOU_MINIMO)} ou mais para a campanha e depois recebeu dela, como pagamento, "
+                        f"mais do que doou: {exemplos}. Pode ser alguém da equipe que também contribuiu, mas também é um "
+                        "jeito de o dinheiro doado voltar para quem doou.", "cnpj": None}]
+
+
+def _doadores_rede(c, sq_candidato, minimo=5):
+    """Quem doou para esta campanha e também doou para muitos outros candidatos (5 ou mais), de quantos partidos."""
+    doadores = c.execute(
+        f"""SELECT doc, max(nome) nome, sum(valor) v FROM receitas WHERE sq_candidato = ? AND {_DOACAO_PF}
+            GROUP BY doc ORDER BY v DESC LIMIT 40""", (sq_candidato,)).fetchall()
+    if not doadores:
+        return []
+    aqui = {r["doc"]: (r["nome"], r["v"]) for r in doadores}
+    marcas = ",".join("?" * len(aqui))
+    saida = []
+    for r in c.execute(
+            f"""SELECT r.doc, count(DISTINCT r.sq_candidato) candidatos, count(DISTINCT c.partido) partidos, sum(r.valor) total,
+                       group_concat(DISTINCT c.partido) siglas
+                FROM receitas r LEFT JOIN candidatos c ON c.sq_candidato = r.sq_candidato
+                WHERE r.doc IN ({marcas}) AND r.origem NOT LIKE '%rópri%' GROUP BY r.doc""", list(aqui)):
+        if r["candidatos"] >= minimo:
+            nome, valor = aqui[r["doc"]]
+            saida.append({"nome": nome, "aqui": valor, "candidatos": r["candidatos"], "partidos": r["partidos"],
+                          "total": r["total"], "siglas": sorted((r["siglas"] or "").split(","))[:8]})
+    return sorted(saida, key=lambda x: -x["total"])

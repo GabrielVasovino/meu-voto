@@ -501,7 +501,8 @@ def _sinais_empresas(lista, nome_dep=None, ja_sinalizadas=frozenset()):
             s.append(_sinal("atencao" if outras["total"] >= VALOR_RELEVANTE else "info",
                             "Empresa do candidato recebeu de outras campanhas",
                             f"{nome} recebeu {_brl(outras['total'])} de {outras['quantas']} "
-                            f"{'outra campanha' if outras['quantas'] == 1 else 'outras campanhas'} em 2026: {quem}.",
+                            f"{'outra campanha' if outras['quantas'] == 1 else 'outras campanhas'} em 2026"
+                            f"{_texto_partidos(outras.get('porPartido'), outras['quantas'])}. As que mais pagaram: {quem}.",
                             FONTE_RECEITA + " e TSE"))
         em = e.get("emendas") or {}
         if em.get("total"):
@@ -520,17 +521,69 @@ def _sinais_empresas(lista, nome_dep=None, ja_sinalizadas=frozenset()):
     return s
 
 
+# Vices e suplentes também podem ser sócios de empresas; o TSE usa estes códigos para eles.
+NOMES_CARGOS = {**tse.CARGOS, 2: "Vice-presidente", 4: "Vice-governador", 9: "1º suplente de senador", 10: "2º suplente de senador"}
+
+
+def _texto_partidos(por_partido, quantas):
+    """", 12 delas do PL e 3 do PP" (ou ", todas do PL"), a partir de [[partido, quantas, valor]]."""
+    if not por_partido:
+        return ""
+    if len(por_partido) == 1 and quantas > 1:
+        return f", todas do {por_partido[0][0]}"
+    partes = [f"{n} do {p}" for p, n, _ in por_partido[:3]]
+    resto = sum(n for _, n, _ in por_partido[3:])
+    if resto:
+        partes.append(f"{resto} de outros partidos")
+    return f" ({listar(partes)})" if quantas > 1 else f" (do {por_partido[0][0]})"
+
+
+def _sinais_emenda_campanha(dep, g):
+    """Empresa que recebeu emenda indicada pelo próprio deputado e depois foi paga pela campanha dele. Só informativo:
+    são poucos casos no país, e plataformas e grandes empresas (que atendem mais de 100 campanhas) ficam de fora."""
+    if not dep or not g or not g.get("pronto") or g.get("semDados") or not emendas._banco().exists():
+        return []
+    pagos = {f["cnpj"]: f for f in g.get("fornecedores") or [] if f["rede"]["candidatos"] <= gastos.MIN_CLIENTES_PLATAFORMA}
+    if not pagos:
+        return []
+    alvo = emendas.normalizar(dep["nome"])
+    c = emendas._conectar()
+    try:
+        linhas = c.execute(f"SELECT doc, autor, sum(valor) v FROM favorecidos WHERE doc IN ({','.join('?' * len(pagos))}) "
+                           "GROUP BY doc, autor", list(pagos)).fetchall()
+    finally:
+        c.close()
+    s = []
+    for doc, autor, valor in linhas:
+        if emendas.normalizar(autor) != alvo or not valor:
+            continue
+        f = pagos[doc]
+        s.append(_sinal("info", f"Empresa que recebeu emenda do candidato atende a campanha: {f['nome']}",
+                        f"{f['nome']} recebeu {_brl(valor)} de emendas indicadas por {dep['nome']} e foi paga com "
+                        f"{_brl(f['valor'])} por esta campanha. Pode ser um fornecedor comum da região, mas mostra o mesmo "
+                        "dinheiro público e de campanha passando pela mesma empresa.",
+                        "Portal da Transparência (emendas) e TSE", cnpj=doc, categoria="emendas"))
+    return s
+
+
 def _sinais_fornecedor_candidato(lista, total=None):
-    """A campanha pagou empresa de outro candidato de 2026."""
+    """A campanha pagou empresa de outro candidato de 2026. Quando a mesma empresa atende outras campanhas, o aviso
+    mostra essa rede, para ninguém achar que é um caso isolado (ou que é uma rede quando não é)."""
     s = []
     for f in lista or []:
-        quem = "; ".join(f"{d['nome'].title()} ({d['partido']}, {tse.CARGOS.get(d['cargo'], 'candidato').lower()} "
+        quem = "; ".join(f"{d['nome'].title()} ({d['partido']}, {NOMES_CARGOS.get(d['cargo'], 'candidato').lower()} "
                          f"{d['numero']} em {d['uf']})" for d in f["donos"])
+        rede = f.get("rede") or {}
+        texto_rede = ""
+        if rede.get("quantas"):
+            outras = "outra campanha" if rede["quantas"] == 1 else f"outras {rede['quantas']} campanhas"
+            texto_rede = (f" A mesma empresa também recebeu {_brl(rede['total'])} de {outras}"
+                          f"{_texto_partidos(rede.get('porPartido'), rede['quantas'])}.")
         s.append(_sinal("atencao" if relevante(f["valor"], total) else "info",
                         f"Fornecedor é empresa de outro candidato: {' '.join((f['nome'] or '').split())}",
                         f"Esta campanha pagou {_brl(f['valor'])} a essa empresa, que tem como sócio(a) quem também disputa "
-                        f"a eleição de 2026: {quem}. Pode ser um serviço comum, mas também é um caminho para o dinheiro "
-                        "de campanha chegar a um aliado.", FONTE_RECEITA + " e TSE", cnpj=f["cnpj"]))
+                        f"a eleição de 2026: {quem}.{texto_rede} Pode ser um serviço comum, mas também é um caminho para o "
+                        "dinheiro de campanha chegar a um aliado.", FONTE_RECEITA + " e TSE", cnpj=f["cnpj"]))
     return s
 
 
@@ -966,6 +1019,56 @@ def grupo(uf, cargo, id_grupo):
     }
 
 
+
+def rede_lista(uf, cargo, id_grupo):
+    """Dinheiro entre candidatos de uma lista (federação ou partido): empresas de candidatos da lista pagas por outras
+    campanhas e repasses recebidos de outros candidatos. None se a lista não existe."""
+    membros = {str(c["id"]): c for c in tse.listar_bruto(uf, cargo) if c.get("nomeColigacao") == id_grupo}
+    if not membros:
+        return None
+    if not gastos._banco().exists():
+        return {"pronto": False}
+    c = gastos._conectar()
+    try:
+        empresas_lista, vistas = [], set()
+        for sq, cand in membros.items() if empresas.pronto() else ():
+            for e in empresas.do_candidato(sq) or []:
+                if e["basico"] in vistas:
+                    continue
+                pagam = [x for x in empresas._campanhas_que_pagam(c, e["basico"]) if str(x["sq_candidato"]) != sq]
+                if not pagam:
+                    continue
+                vistas.add(e["basico"])
+                da_lista = [x for x in pagam if str(x["sq_candidato"]) in membros]
+                empresas_lista.append({
+                    "dono": {"id": cand["id"], "nomeUrna": cand.get("nomeUrna"), "partido": (cand.get("partido") or {}).get("sigla")},
+                    "empresa": e.get("razao"), "cnpj": empresas.cnpj_matriz(e["basico"]),
+                    "quantas": len(pagam), "total": sum(x["valor"] or 0 for x in pagam),
+                    "daLista": len(da_lista), "totalDaLista": sum(x["valor"] or 0 for x in da_lista),
+                    "porPartido": empresas._por_partido(pagam),
+                })
+        empresas_lista.sort(key=lambda x: -x["total"])
+        ids = [int(x) for x in membros]
+        linhas = c.execute(f"""SELECT sq_cand_doador doador, fonte, sum(valor) valor FROM receitas
+                               WHERE sq_candidato IN ({",".join("?" * len(ids))}) AND sq_cand_doador NOT IN (-1)
+                               AND sq_cand_doador != sq_candidato GROUP BY 1, 2""", ids).fetchall()
+        total = sum(r["valor"] for r in linhas)
+        publico = sum(r["valor"] for r in linhas if r["fonte"] in ("FEFC", "FP"))
+        interno = sum(r["valor"] for r in linhas if str(r["doador"]) in membros)
+        por_doador = {}
+        for r in linhas:
+            por_doador[r["doador"]] = por_doador.get(r["doador"], 0) + r["valor"]
+        doadores = []
+        for sq_d, v in sorted(por_doador.items(), key=lambda kv: -kv[1])[:6]:
+            p = empresas._pessoa(c, sq_d) or {}
+            doadores.append({"nome": p.get("nome"), "partido": p.get("partido"), "cargo": NOMES_CARGOS.get(p.get("cargo")),
+                             "daLista": str(sq_d) in membros, "valor": v})
+        return {"pronto": True, "grupo": id_grupo, "empresas": empresas_lista[:12], "totalEmpresas": len(empresas_lista),
+                "repasses": {"total": total, "publico": publico, "daLista": interno, "doadores": doadores}}
+    finally:
+        c.close()
+
+
 def analisar(uf, cargo, id_candidato):
     bruto = tse.ficha_bruta(uf, cargo, id_candidato)
     if not bruto:
@@ -1003,6 +1106,7 @@ def analisar(uf, cargo, id_candidato):
     trabalho = _trabalho(dep, camara.resumo(), emendas_dep) if dep and dep.get("producao") else None
     analise_gastos = gastos.analisar_candidato(int(id_candidato), nome_urna=bruto.get("nomeUrna"))
     sinais += _sinais_gastos(analise_gastos)
+    sinais += _sinais_emenda_campanha(dep, analise_gastos)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)
@@ -1020,5 +1124,9 @@ def analisar(uf, cargo, id_candidato):
     return {"chance": chance, "orientacao": orientacao, "trabalho": trabalho, "estadual": _trabalho_estadual(dep_est),
             "gastos": analise_gastos, "trajetoria": traj,
             "empresas": {"lista": socio_de, "status": empresas.status()},
+            # Ligações de dinheiro com outros candidatos: empresas deles que esta campanha pagou e empresas deste
+            # candidato pagas por outras campanhas (aba Dinheiro, "Ligações com candidatos").
+            "rede": {"pagas": de_candidatos or [], "pronto": de_candidatos is not None,
+                     "minhas": [e for e in socio_de or [] if (e.get("outrasCampanhas") or {}).get("quantas")]},
             "patrimonioAnterior": {"ano": anteriores[-1]["ano"], "valor": anteriores[-1]["bens"]} if anteriores else None,
             "sinais": sinais, "portalAtivo": portal_ativo, "pontuacao": pontuacao(sinais, dep, dep_est)}
