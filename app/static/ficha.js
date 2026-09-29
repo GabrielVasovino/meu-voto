@@ -88,7 +88,7 @@ async function abrirFicha(cargo, id) {
   try {
     ficha.f = await api(`/api/ficha?uf=${ufConsulta(cargo)}&cargo=${cargo}&id=${id}`);
   } catch (e) {
-    $("#ficha-cab .ficha-id").innerHTML = `<p class="carregando">${esc(e.message)}</p>`;
+    $("#ficha-cab .ficha-id").innerHTML = `<p class="carregando aviso">${esc(e.message)}</p>`;
     return;
   }
   if (minha !== fichaPedido) return;
@@ -209,12 +209,12 @@ function painelResumo() {
   if (a?.pontuacao?.nota != null) {
     const p = a.pontuacao;
     cartoes.push({
-      icone: "resumo", rot: "Pontuação", ir: "#bloco-pontuacao",
+      icone: "resumo", rot: "Nota geral", ir: "#bloco-pontuacao",
       val: `${p.nota}<small class="de100"> de 100</small>`,
       ctx: p.desempenho != null
         ? `Integridade ${p.integridade} e desempenho ${p.desempenho} como deputado ${p.casa === "estadual" ? "estadual" : "federal"}.`
         : `Vem só da integridade, porque não tem mandato de deputado para avaliar.`,
-      tom: p.nota >= 80 ? "ok" : p.nota >= 60 ? "atencao" : "alerta",
+      tom: { ok: "ok", conferir: "atencao", serio: "alerta" }[nivelNota(p.nota)],
     });
   }
 
@@ -353,14 +353,14 @@ function htmlBlocoPontuacao(p) {
   const criterios = p.criterios ? `<p class="nota-sub">Desempenho no mandato, comparado aos outros ${casa}. O traço no meio de cada barra marca o deputado típico.</p>
       <div class="nota-barras">${p.criterios.map((c) => barraNota(c.rotulo + (c.peso > 1 ? " <small>(vale em dobro)</small>" : ""), Math.round(100 * c.valor))).join("")}</div>` : "";
   const ajuste = p.desempenho != null ? Math.round(0.4 * (p.desempenho - 50)) : 0;
-  let texto = `A nota é ${p.nota}. A integridade ficou em ${p.integridade}`;
+  let texto = `A nota geral é ${p.nota}. A integridade ficou em ${p.integridade}`;
   texto += p.descontos.length
     ? ` e perdeu ${100 - p.integridade} pontos por ${p.descontos.length === 1 ? "um indício encontrado" : `${p.descontos.length} indícios encontrados`} nos dados públicos.`
     : ", sem nenhum desconto.";
   if (p.desempenho != null) {
     texto += ` O desempenho no mandato ficou em ${p.desempenho}, ${ajuste === 0 ? "igual ao de um deputado típico, e não mudou a nota" : ajuste > 0 ? `acima de um deputado típico, e somou ${ajuste} pontos` : `abaixo de um deputado típico, e tirou ${-ajuste} pontos`}.`;
   }
-  return secao("Pontuação", `
+  return secao("Nota geral", `
       <div class="nota-topo">
         <div class="nota-grande"><strong>${p.nota}</strong><span>de 100</span></div>
         <div class="nota-barras">
@@ -402,6 +402,7 @@ function htmlBlocoChance(c) {
   return secao("Onde está na fila da lista", `
       <div class="fila" role="img" aria-label="Posição ${x.posicao} de ${c.total}; ${vagas} vagas estimadas">${quadrados}${c.total > mostrar ? `<span class="q-mais">+${c.total - mostrar}</span>` : ""}</div>
       <div class="fila-legenda"><span><i class="q dentro"></i> as ${vagas} vagas da lista</span><span><i class="q voce"></i> este candidato, em ${x.posicao}º</span><span><i class="q"></i> os demais</span></div>
+      ${htmlAvisoEstimativa()}
       <p class="fila-texto">A ordem vem da força de cada candidato, que junta a maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e o dinheiro arrecadado em 2026. Este teve ${hist} e arrecadou ${brlCompacto.format(x.arrecadado)}, o que dá força ${Math.round(x.forca)} de 100. Passe o mouse sobre um quadrado para ver o nome.</p>`,
   leitura("neutro", texto, `Na eleição de 2022, quem estava na faixa "${esc(x.chance)}" se elegeu ${CHANCE_EM_2022[x.chance] || "em poucos casos"} vezes. A conta usa os votos anteriores e o dinheiro arrecadado, sem pesquisas.`),
   "bloco-chance");

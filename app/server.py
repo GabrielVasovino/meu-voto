@@ -297,8 +297,8 @@ class Handler(BaseHTTPRequestHandler):
             self._json(e.status, {"erro": str(e)})
         except tse.TSEIndisponivel:
             self._json(503, {"erro": "Não foi possível falar com o TSE agora. Verifique a internet e tente de novo."})
-        except Preparando:
-            self._json(202, {"preparando": True})
+        except Preparando as e:
+            self._json(202, {"preparando": True, "etapa": historico.etapa(e.args[0]), "passos": historico.PASSOS})
         except Exception:  # noqa: BLE001 - sem isto a conexão cai sem resposta e o nginx mostra "502 Bad Gateway"
             traceback.print_exc()
             self._json(500, {"erro": "Não conseguimos montar esta parte agora. Tente de novo em alguns minutos."})
@@ -386,7 +386,7 @@ class Handler(BaseHTTPRequestHandler):
             raise ErroPedido(400, "A projeção só vale para deputado federal e estadual/distrital")
         if not historico.pronto(uf):
             historico.preparar(uf)
-            raise Preparando()
+            raise Preparando(uf)
         return uf, cargo
 
     def _buscar(self, qs):
@@ -516,13 +516,17 @@ def _status_bases():
             "descricao": descricao, "fonte": fonte, "pronto": bool(st.get("pronto")),
             "atualizando": st.get("etapa") not in ("pronto", "parado", "erro"),
             "falhou": st.get("etapa") == "erro",
-            "atualizadoEm": datetime.fromtimestamp(arq.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if arq.exists() else None,
+            # O índice da Receita chega pronto com o site: vale a data em que foi montado, não a da cópia.
+            "atualizadoEm": (st.get("geradoEm") if modulo is empresas else None)
+            or (datetime.fromtimestamp(arq.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if arq.exists() else None),
         })
     return saida
 
 
-def _conferir_bases():
+def _conferir_bases(sem=()):
     for base in BASES:
+        if base in sem:
+            continue
         try:
             base.iniciar()
         except Exception:  # noqa: BLE001 - uma base com problema não impede as outras
@@ -551,6 +555,15 @@ def _preparar_historico():
             historico.municipal(uf)
         except Exception:  # noqa: BLE001 - tenta de novo quando alguém abrir o estado
             traceback.print_exc()
+    # O índice de sócios da Receita baixa uns 10 GB e leva perto de uma hora (só fora do modo público). Ele fica
+    # para depois das listas de deputados e do banco de gastos, que as telas usam primeiro e que ele também cruza.
+    if not empresas.BAIXAR_DA_RECEITA:
+        return
+    for _ in range(120):
+        if gastos._banco().exists():
+            break
+        time.sleep(30)
+    empresas.iniciar()
 
 
 REDE_TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
@@ -579,7 +592,10 @@ def main():
     tse.configurar(cache)
     analise.configurar(CONFIG)
     login.configurar(LOGIN)
-    _conferir_bases()
+    # O servidor público usa o índice da Receita que vai junto com o site (empresas.PACOTE), sem baixar 10 GB.
+    # No computador pessoal, sem índice ainda, a montagem espera a vez em _preparar_historico.
+    empresas.BAIXAR_DA_RECEITA = not args.publico
+    _conferir_bases(sem=(empresas,) if empresas.BAIXAR_DA_RECEITA and not empresas._arquivo().exists() else ())
     threading.Thread(target=_manter_dados, daemon=True).start()
     threading.Thread(target=_preparar_historico, daemon=True).start()
     try:

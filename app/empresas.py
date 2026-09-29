@@ -5,8 +5,15 @@ das empresas (Empresas0..9), num compartilhamento público do Nextcloud (SERPRO)
 mascarado (***123456**): o casamento com o candidato usa esses 6 dígitos do meio, tirados do CPF completo que
 o TSE publica, junto com o nome completo. Só as linhas que casam com algum candidato são guardadas; os
 arquivos baixados são apagados logo depois de lidos. Refeito uma vez por mês, em segundo plano.
+
+Montar o índice baixa uns 10 GB e leva perto de uma hora, pesado demais para o servidor público. Por isso o
+índice pronto (só as empresas de candidatos, 1,4 MB compactado, sem CPF) vai junto com o site em
+app/dados_publicos/receita_socios.json.gz, e o servidor público só usa essa cópia (BAIXAR_DA_RECEITA = False).
+Para atualizar no computador pessoal: python app/empresas.py --atualizar (baixa e empacota) ou --empacotar
+(só empacota o índice que o app pessoal já montou).
 """
 import csv
+import gzip
 import io
 import json
 import re
@@ -30,6 +37,9 @@ TOKEN = "gn672Ad4CF8N6TK"  # compartilhamento público "Arquivos da Receita Fede
 PASTA_CNPJ = "/Dados/Cadastros/CNPJ/"
 URL_CAND_2026 = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2026.zip"
 TTL = 30 * 24 * tse.HORA
+PACOTE = Path(__file__).resolve().parent / "dados_publicos" / "receita_socios.json.gz"
+# O servidor público (--publico) desliga: usa só o PACOTE, sem baixar os 10 GB da Receita.
+BAIXAR_DA_RECEITA = True
 
 _indice = None
 _lock = threading.Lock()
@@ -212,8 +222,32 @@ def _preparar():
         _rodando.clear()
 
 
+def _versao(dados):
+    """(mês dos dados da Receita, data em que o índice foi montado), para saber qual cópia é mais nova."""
+    d, m, a = (dados.get("geradoEm") or "00/00/0000").split("/")
+    return dados.get("mes") or "", f"{a}{m}{d}"
+
+
+def _usar_pacote():
+    """Copia para o cache o índice que vai junto com o site, se ele for mais novo que o do cache (ou se não houver)."""
+    if not PACOTE.exists():
+        return
+    try:
+        pacote = gzip.decompress(PACOTE.read_bytes())
+        novo = json.loads(pacote)
+        arq = _arquivo()
+        if arq.exists() and _versao(json.loads(arq.read_text(encoding="utf-8"))) >= _versao(novo):
+            return
+        tmp = arq.with_suffix(".tmp")
+        tmp.write_bytes(pacote)
+        tmp.replace(arq)
+    except (OSError, ValueError) as e:
+        print(f"[{__name__}] não deu para usar {PACOTE.name}: {e}", file=sys.stderr)
+
+
 def _carregar():
     global _indice
+    _usar_pacote()
     arq = _arquivo()
     # A versão pública do app usa outra pasta de cache; aproveita o índice do cache pessoal em vez de baixar de novo.
     pessoal = Path.home() / ".meuvoto" / "cache" / "empresas" / "indice.json"
@@ -239,6 +273,8 @@ def _carregar():
 def iniciar():
     if _carregar():
         _estado["etapa"] = "pronto"
+    if not BAIXAR_DA_RECEITA:
+        return
     arq = _arquivo()
     if (not arq.exists() or time.time() - arq.stat().st_mtime > TTL) and not _rodando.is_set():
         _rodando.set()
@@ -251,7 +287,7 @@ def pronto():
 
 def status():
     return {"pronto": pronto(), "etapa": _estado["etapa"], "progresso": _estado["progresso"], "erro": _estado["erro"],
-            "mes": (_indice or {}).get("mes")}
+            "mes": (_indice or {}).get("mes"), "geradoEm": (_indice or {}).get("geradoEm")}
 
 
 def do_candidato(sq_candidato):
@@ -352,3 +388,30 @@ def fornecedores_de_candidatos(sq_candidato):
     finally:
         c.close()
     return sorted(saida, key=lambda x: -x["valor"])
+
+
+def empacotar():
+    """Grava o índice do cache em PACOTE, para ir junto com o site."""
+    dados = json.loads(_arquivo().read_text(encoding="utf-8"))
+    PACOTE.parent.mkdir(parents=True, exist_ok=True)
+    PACOTE.write_bytes(gzip.compress(json.dumps(dados, ensure_ascii=False, separators=(",", ":")).encode("utf-8"), 9))
+    print(f"{PACOTE} atualizado: dados da Receita de {dados.get('mes')}, montado em {dados.get('geradoEm')}, "
+          f"{len(dados['candidatos'])} candidatos sócios de empresas.")
+
+
+if __name__ == "__main__":
+    import argparse
+    ap = argparse.ArgumentParser(description="Índice de sócios da Receita para o site público")
+    ap.add_argument("--atualizar", action="store_true", help="baixa tudo da Receita de novo (perto de 1 hora) e empacota")
+    ap.add_argument("--empacotar", action="store_true", help="só empacota o índice que já está no cache pessoal")
+    args = ap.parse_args()
+    tse.configurar(Path.home() / ".meuvoto" / "cache")
+    if args.atualizar:
+        _rodando.set()
+        _preparar()
+        if _estado["etapa"] != "pronto":
+            sys.exit(f"Falhou: {_estado['erro']}")
+    if args.atualizar or args.empacotar:
+        empacotar()
+    else:
+        ap.print_help()

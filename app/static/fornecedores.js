@@ -9,6 +9,15 @@ const fornecedores = { dados: null, uf: null, ordem: "valor", semPlataformas: fa
 // sociais, meios de pagamento e gráficas gigantes, que aparecem no topo em qualquer estado.
 const CLIENTES_PLATAFORMA = 100;
 
+// Os passos que o servidor segue para montar o banco de gastos (gastos._montar).
+const PASSOS_GASTOS = [
+  ["despesas de 2026", "Baixando as despesas de todas as campanhas do país"],
+  ["pagamentos de 2026", "Baixando os pagamentos já feitos"],
+  ["receitas de 2026", "Baixando as doações e demais receitas"],
+  ["histórico de fornecedores (2022)", "Comparando com os fornecedores de 2022"],
+  ["índices", "Organizando tudo para as buscas ficarem rápidas"],
+];
+
 const ORDENS_FORNECEDORES = {
   valor: ["Mais dinheiro recebido", (a, b) => b.total - a.total],
   campanhas: ["Mais campanhas atendidas no estado", (a, b) => b.candidatos - a.candidatos || b.total - a.total],
@@ -20,7 +29,7 @@ function abrirFornecedores() {
   if (!dlg.open) dlg.showModal();
   if (!estado.uf) {
     $("#fornecedores-corpo").innerHTML = `${cabFornecedores("")}
-      <div class="lista-dlg-rolagem"><p class="carregando">Escolha o seu estado no topo da página para ver os fornecedores das campanhas de lá.</p></div>`;
+      <div class="lista-dlg-rolagem"><p class="carregando aviso">Escolha o seu estado no topo da página para ver os fornecedores das campanhas de lá.</p></div>`;
     return;
   }
   carregarFornecedores();
@@ -38,20 +47,22 @@ async function carregarFornecedores() {
   const uf = estado.uf;
   const corpo = $("#fornecedores-corpo");
   if (fornecedores.dados && fornecedores.uf === uf) return desenharFornecedores();
-  corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem"><p class="carregando">Montando o panorama de fornecedores de ${esc(uf)}…</p></div>`;
+  if (!corpo.querySelector(".espera")) corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem"><p class="carregando">Montando o panorama de fornecedores de ${esc(uf)}…</p></div>`;
   let p;
   try {
     p = await api(`/api/gastos/panorama?uf=${uf}`);
   } catch (e) {
-    corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem"><p class="carregando">${esc(e.message)}</p></div>`;
+    corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem"><p class="carregando aviso">${esc(e.message)}</p></div>`;
     return;
   }
   if (!$("#fornecedores-dlg").open || estado.uf !== uf) return;
   if (!p.pronto) {
-    corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem"><p class="carregando">Preparando as despesas de todas as campanhas do país. Na primeira vez isso leva alguns minutos; esta tela atualiza sozinha.</p></div>`;
-    setTimeout(() => { if ($("#fornecedores-dlg").open) carregarFornecedores(); }, 8000);
+    corpo.innerHTML = `${cabFornecedores(uf)}<div class="lista-dlg-rolagem">${htmlEspera("fornecedores", "Preparando as contas de campanha",
+      PASSOS_GASTOS, p.status?.etapa, "Isso só acontece na primeira vez depois que o site é atualizado e leva alguns minutos. A tela atualiza sozinha.")}</div>`;
+    setTimeout(() => { if ($("#fornecedores-dlg").open) carregarFornecedores(); }, 4000);
     return;
   }
+  fimEspera("fornecedores");
   fornecedores.dados = p;
   fornecedores.uf = uf;
   desenharFornecedores();
@@ -111,7 +122,7 @@ function desenharFornecedores() {
           Esconder as ${plataformas} plataformas que atendem mais de ${CLIENTES_PLATAFORMA} campanhas no país</label>
       </div>
       ${lista.length ? `<ol class="forn-lista">${lista.map((f) => linhaFornecedor(f, max, uf)).join("")}</ol>`
-        : `<p class="carregando">Nenhuma empresa encontrada com "${esc(fornecedores.busca)}".</p>`}
+        : `<p class="carregando aviso">Nenhuma empresa encontrada com "${esc(fornecedores.busca)}".</p>`}
       <p class="nota-pequena">Redes sociais, meios de pagamento e grandes gráficas aparecem no topo porque atendem quase todas as campanhas; o filtro acima tira essas empresas da lista. Em "Ver a empresa" estão o cadastro na Receita, os sócios, todas as campanhas atendidas e o que chama atenção. Dados das prestações de contas de 2026 e 2022 entregues ao TSE, atualizados em ${esc(p.geradoEm)}.</p>
     </div>`;
 }

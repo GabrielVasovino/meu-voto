@@ -28,19 +28,22 @@ async function montarQuiz() {
   if (!estado.quiz) estado.quiz = {};
   ligarQuiz();
   if (!quizDados || quizDados.uf !== estado.uf) {
-    corpo.innerHTML = `<p class="carregando">Carregando as votações…</p>`;
+    if (!corpo.querySelector(".espera")) corpo.innerHTML = `<p class="carregando">Carregando as votações…</p>`;
     let d;
     try {
       d = await carregarQuizDados();
     } catch (e) {
-      corpo.innerHTML = `<p class="carregando">${esc(e.message)}</p>`;
+      corpo.innerHTML = `<p class="carregando aviso">${esc(e.message)}</p>`;
       return;
     }
     if (!d) {
-      corpo.innerHTML = `<p class="carregando">Preparando os dados da Câmara. Na primeira vez isso leva cerca de um minuto…</p>`;
-      setTimeout(() => { if (!$("#aba-quiz").hidden) montarQuiz(); }, 5000);
+      corpo.innerHTML = htmlEspera("quiz", "Preparando as votações da Câmara",
+        [["camara", "Baixando as votações do plenário desde 2023 e como cada deputado votou"]], "camara",
+        "Isso só acontece na primeira vez depois que o site é atualizado e leva cerca de um minuto. A tela atualiza sozinha.");
+      setTimeout(() => { if (!$("#aba-quiz").hidden) montarQuiz(); }, 4000);
       return;
     }
+    fimEspera("quiz");
   }
   // Na primeira visita: quem já respondeu vê o resultado; quem não, continua de onde parou.
   if (!quizVisao.modo || quizVisao.uf !== estado.uf) {
@@ -194,17 +197,16 @@ function htmlComoVotaram(q) {
 // ---------- tela de resultado ----------
 
 function linhaAfinidade(nome, sub, x, atributos = "") {
-  const p = x.a / x.n;
-  return `<div class="linha" title="${Math.round(p * 100)}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
+  const p = pctAfinidade(x);
+  return `<div class="linha" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
     <span class="nome">${nome}${sub ? `<small>${sub}</small>` : ""}</span>
-    <span class="trilho"><span class="cheio" style="width:${Math.round(p * 100)}%"></span></span>
-    <span class="pc" ${atributos}>${Math.round(p * 100)}% <span class="pc-rot">de afinidade</span><small>igual a você em ${x.a} de ${x.n}</small></span>
+    <span class="linha-barra"><span class="trilho"><span class="cheio" style="width:${p}%"></span></span><b ${atributos}>${p}%</b></span>
   </div>`;
 }
 
 // O número grande dos cartões do pódio, sempre dizendo o que é.
 function htmlPctCartao(x) {
-  return `<div class="res-pc"><strong>${pctAfinidade(x)}%</strong><span>de afinidade: votou como você em ${x.a} de ${x.n} ${x.n === 1 ? "votação" : "votações"}</span></div>`;
+  return `<div class="res-pc" title="Votou como você em ${x.a} de ${x.n} ${x.n === 1 ? "votação" : "votações"} do quiz"><strong>${pctAfinidade(x)}%</strong><span>de afinidade</span></div>`;
 }
 
 // Ordena com um pequeno ajuste para quem tem poucas votações em comum (regra de Laplace).
@@ -232,24 +234,8 @@ function desenharResultado() {
     if (concorda(q, q.governo === "Sim" ? "Sim" : "Não")) gov.a++;
   }
   const minimo = Math.min(3, n);
-  const deps = quizDados.deputados.map((d) => {
-    const x = { d, a: 0, n: 0 };
-    for (const q of respondidas) {
-      const v = q.deputados[d.id];
-      if (!v) continue;
-      x.n++;
-      if (concorda(q, v)) x.a++;
-    }
-    return x;
-  }).filter((x) => x.n >= minimo).sort((a, b) => notaQuiz(b) - notaQuiz(a));
-
   const rankingPartidos = Object.entries(partidos).filter(([, x]) => x.n >= minimo)
     .sort((a, b) => notaQuiz(b[1]) - notaQuiz(a[1]));
-  const linhaPartido = ([s, x]) => linhaAfinidade(esc(sigla(s)), "", x);
-  const htmlDep = (x) => linhaAfinidade(
-    `<button type="button" class="link-btn" data-dep-ficha="${x.d.candidatura.id}" data-cargo="${x.d.candidatura.cargo}">${esc(x.d.nome)}</button>`,
-    `${esc(sigla(x.d.partido))}, disputa ${esc(x.d.candidatura.rotulo.toLowerCase())} com o ${esc(x.d.candidatura.numero)}`, x);
-  const topDeps = deps.slice(0, 3);
   const nomeUf = esc(UFS[estado.uf] || estado.uf);
 
   const faltam = vistas < perguntas.length;
@@ -274,6 +260,7 @@ function desenharResultado() {
         <h4>Federações e partidos, para deputado</h4>
         <p class="explica">O voto para deputado vai primeiro para a lista, que é a federação ou o partido. As listas são as mesmas para deputado federal e estadual em ${nomeUf}. Nas federações, os partidos votam como um bloco, então as bancadas são somadas.</p>
       </div>
+      <p class="nota-pequena">As vagas de cada lista são uma estimativa com os votos de 2022, não uma previsão.</p>
       <div class="res-podio" id="res-podio"><p class="carregando">Comparando com as listas de ${nomeUf}…</p></div>
     </section>
 
@@ -290,28 +277,13 @@ function desenharResultado() {
         <h4>Partido por partido</h4>
         <p class="explica">Cada partido sozinho, pela maioria da própria bancada na Câmara. Partidos sem deputados federais não aparecem porque não têm votos para comparar.</p>
       </div>
-      <div class="cartao res-partidos-lista">
-        <div class="afinidade">${rankingPartidos.slice(0, 6).map(linhaPartido).join("")}</div>
-        ${rankingPartidos.length > 6 ? `<details class="res-mais"><summary>Ver os outros ${rankingPartidos.length - 6} partidos</summary>
-          <div class="afinidade">${rankingPartidos.slice(6).map(linhaPartido).join("")}</div></details>` : ""}
-      </div>
-    </section>` : ""}
-
-    ${topDeps.length ? `<section class="res-secao">
-      <div class="res-secao-cab">
-        <h4>Quem já é deputado federal</h4>
-        <p class="explica">Quem está hoje na Câmara e disputa algum cargo em 2026 em ${esc(estado.uf)} tem o próprio voto registrado nessas votações, então aqui a afinidade é da pessoa, não do partido.</p>
-      </div>
-      <div class="res-podio">
-        ${topDeps.map((x, k) => cartaoPessoa(x, k)).join("")}
-        <details class="res-todos cartao"><summary>Ver todos os deputados (${deps.length})</summary>
-          <div class="afinidade">${deps.map(htmlDep).join("")}</div>
-        </details>
-      </div>
+      <div class="partidos-grade">${rankingPartidos.slice(0, 8).map(cartaoPartido).join("")}</div>
+      ${rankingPartidos.length > 8 ? `<details class="res-mais"><summary>Ver os outros ${rankingPartidos.length - 8} partidos</summary>
+        <div class="partidos-grade">${rankingPartidos.slice(8).map(cartaoPartido).join("")}</div></details>` : ""}
     </section>` : ""}
 
     <div class="callout res-seguir">
-      <p>Essa afinidade acompanha você nos próximos passos: aparece em cada lista de deputados, no rosto de quem já é deputado federal e ao lado de cada candidato a senador, governador e presidente.</p>
+      <p>Essa afinidade acompanha você nos próximos passos: aparece em cada lista de deputados e ao lado de cada candidato a senador, governador e presidente.</p>
       <button type="button" class="btn primario" data-ir-passo="dep_federal">Seguir para Deputado(a) federal →</button>
     </div>
     <div class="res-rodape">
@@ -322,39 +294,97 @@ function desenharResultado() {
   preencherCargosResultado();
 }
 
-// Senado, Governo e Presidência: os 3 candidatos de cada cargo cujo partido votou mais como você.
+// Cartão pequeno de um partido: sigla, porcentagem e uma barra fina.
+function cartaoPartido([s, x]) {
+  const p = pctAfinidade(x);
+  return `<div class="partido-card" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
+    <span class="partido-sigla">${esc(sigla(s))}</span>
+    <strong>${p}%</strong>
+    <span class="partido-trilho"><span style="width:${p}%"></span></span>
+  </div>`;
+}
+
+// Senado, Governo e Presidência: um cargo por vez, em abas, com os candidatos ordenados pela afinidade do partido.
+const CARGOS_RESULTADO = [[5, "Senado"], [3, "Governo do estado"], [1, "Presidência"]];
+const resCargos = { listas: null, uf: null, cargo: 5, todos: false };
+const MOSTRAR_CANDIDATOS = 5;
+
 async function preencherCargosResultado() {
-  const cargos = [[5, "Senado"], [3, "Governo do estado"], [1, "Presidência"]];
-  let listas;
-  try {
-    listas = await Promise.all(cargos.map(([c]) => api(`/api/candidatos?uf=${ufConsulta(c)}&cargo=${c}`)));
-  } catch {
-    const alvo = $("#res-cargos");
-    if (alvo) alvo.closest(".res-secao").remove();
-    return;
+  if (!resCargos.listas || resCargos.uf !== estado.uf) {
+    let listas;
+    try {
+      listas = await Promise.all(CARGOS_RESULTADO.map(([c]) => api(`/api/candidatos?uf=${ufConsulta(c)}&cargo=${c}`)));
+    } catch {
+      $("#res-cargos")?.closest(".res-secao").remove();
+      return;
+    }
+    resCargos.listas = Object.fromEntries(CARGOS_RESULTADO.map(([c], i) => [c, listas[i].candidatos]));
+    resCargos.uf = estado.uf;
   }
+  desenharCargosResultado();
+}
+
+function desenharCargosResultado() {
   const alvo = $("#res-cargos");
-  if (!alvo) return;
-  alvo.innerHTML = cargos.map(([cargo, rotulo], i) => {
-    const vistos = new Set();
-    const itens = listas[i].candidatos
-      .filter((c) => candidaturaValida(c) && !vistos.has(`${c.nomeUrna}|${c.numero}`) && vistos.add(`${c.nomeUrna}|${c.numero}`))
-      .map((c) => ({ c, x: afinidadePartidos([c.partido]) }))
-      .sort((a, b) => notaAfinidade(b.x) - notaAfinidade(a.x) || a.c.nomeUrna.localeCompare(b.c.nomeUrna, "pt-BR"));
-    const linha = ({ c, x }) => `<li class="res-cand">
-        ${fotoHtml(ufConsulta(cargo), c.id, c.nomeUrna, "foto res-cand-foto")}
-        <span class="res-cand-nome"><button type="button" class="link-btn" data-dep-ficha="${c.id}" data-cargo="${cargo}">${esc(nomeProprio(c.nomeUrna))}</button>
-          <small>${esc(c.partido)}, número ${esc(c.numero)}</small></span>
-        ${x ? `<span class="res-cand-pc"><b>${pctAfinidade(x)}%</b><small>de afinidade (${x.a} de ${x.n})</small></span>`
-          : `<span class="res-cand-pc sem"><small>Partido sem bancada na Câmara</small></span>`}
-      </li>`;
-    return `<article class="res-cargo cartao">
-      <h5>${rotulo}</h5>
-      <ol class="res-cands">${itens.slice(0, 3).map(linha).join("")}</ol>
-      ${itens.length > 3 ? `<details class="res-mais"><summary>Ver todos os ${itens.length}</summary>
-        <ol class="res-cands">${itens.slice(3).map(linha).join("")}</ol></details>` : ""}
+  if (!alvo || !resCargos.listas) return;
+  const cargo = resCargos.cargo;
+  const uf = ufConsulta(cargo);
+  const vistos = new Set();
+  const itens = resCargos.listas[cargo]
+    .filter((c) => candidaturaValida(c) && !vistos.has(`${c.nomeUrna}|${c.numero}`) && vistos.add(`${c.nomeUrna}|${c.numero}`))
+    .map((c) => ({ c, x: afinidadePartidos([c.partido]) }))
+    .sort((a, b) => notaAfinidade(b.x) - notaAfinidade(a.x) || a.c.nomeUrna.localeCompare(b.c.nomeUrna, "pt-BR"));
+  const abas = CARGOS_RESULTADO.map(([c, rot]) =>
+    `<button type="button" role="tab" data-res-cargo="${c}" aria-selected="${c === cargo}">${rot}</button>`).join("");
+  const nome = (c) => `<button type="button" class="link-btn" data-dep-ficha="${c.id}" data-cargo="${cargo}">${esc(nomeProprio(c.nomeUrna))}</button>`;
+  // Os 3 primeiros em cartões, no mesmo formato do pódio das listas; o anel da foto é a nota geral.
+  const cartao = ({ c, x }, k) => `<article class="res-top${k === 0 ? " primeiro" : ""}">
+      <span class="res-pos">${k + 1}º lugar</span>
+      <div class="res-pessoa">${fotoHtml(uf, c.id, c.nomeUrna, "foto res-foto")}<h4>${nome(c)}</h4></div>
+      <div class="chips"><span class="chip">${esc(c.partido)}</span><span class="chip">Nº ${esc(c.numero)}</span></div>
+      ${x ? `${htmlPctCartao(x)}<div class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></div>`
+        : `<p class="res-vagas">O partido não tem bancada na Câmara, então não há afinidade para calcular.</p>`}
+      <p class="res-vagas" data-nota-quiz="${c.id}">Nota geral: calculando…</p>
     </article>`;
-  }).join("");
+  const linha = ({ c, x }, k) => `<li class="res-cand">
+      <span class="res-cand-pos">${k + 4}º</span>
+      ${fotoHtml(uf, c.id, c.nomeUrna, "foto res-cand-foto")}
+      <span class="res-cand-nome">${nome(c)}<small>${esc(c.partido)}, número ${esc(c.numero)}</small></span>
+      ${x ? `<span class="linha-barra" title="${pctAfinidade(x)}% de afinidade: o partido votou como você em ${x.a} de ${x.n} votações do quiz"><span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%</b></span>`
+        : `<span class="res-cand-sem">Partido sem bancada na Câmara</span>`}
+    </li>`;
+  const resto = itens.slice(3);
+  alvo.innerHTML = `<div class="res-abas" role="tablist" aria-label="Cargo">${abas}</div>
+    <div class="res-podio">${itens.slice(0, 3).map(cartao).join("")}</div>
+    ${resto.length ? `<button type="button" class="link-btn res-ver-todos" data-res-cargo-todos>${resCargos.todos ? "Mostrar só os 3 primeiros" : `Ver os outros ${resto.length} candidatos`}</button>` : ""}
+    ${resCargos.todos && resto.length ? `<div class="cartao res-cargo-painel"><ol class="res-cands">${resto.map(linha).join("")}</ol></div>` : ""}`;
+  pintarNotasQuiz(cargo, uf, resCargos.todos ? itens : itens.slice(0, 3));
+}
+
+// Anel da foto e nota geral de cada candidato mostrado, com a mesma análise da ficha (guardada em resumoMajoritario,
+// que a tela do cargo também usa), de dois em dois para não pesar no servidor.
+async function pintarNotasQuiz(cargo, uf, itens) {
+  const fila = [...itens];
+  const trabalhar = async () => {
+    for (let it = fila.shift(); it; it = fila.shift()) {
+      const { c } = it;
+      const chave = `a-${uf}-${cargo}-${c.id}`;
+      let a = resumoMajoritario.get(chave);
+      if (!a) {
+        try { a = await api(`/api/analise?uf=${uf}&cargo=${cargo}&id=${c.id}`); resumoMajoritario.set(chave, a); } catch { a = null; }
+      }
+      if (resCargos.cargo !== cargo) return;
+      const nota = a?.pontuacao?.nota;
+      const nivel = nivelNota(nota);
+      document.querySelectorAll(`#res-cargos [data-dep-ficha="${c.id}"]`).forEach((b) => {
+        const foto = b.closest(".res-top, .res-cand")?.querySelector(".foto");
+        if (foto && nivel) foto.classList.add(`anel-${nivel}`);
+      });
+      const txt = $(`#res-cargos [data-nota-quiz="${c.id}"]`);
+      if (txt) txt.innerHTML = nota == null ? "" : `Nota geral: <strong class="nota-${nivel}">${nota}</strong> de 100`;
+    }
+  };
+  await Promise.all([trabalhar(), trabalhar()]);
 }
 
 // Pódio com as 3 listas (federação ou partido) de deputado federal do estado que mais votaram como você.
@@ -365,16 +395,17 @@ async function preencherListasResultado() {
       p = await api(`/api/listas?uf=${estado.uf}&cargo=6`);
     } catch {
       const podio = $("#res-podio");
-      if (podio) podio.innerHTML = `<p class="carregando">Não foi possível montar as listas agora. Tente de novo em alguns minutos.</p>`;
+      if (podio) podio.innerHTML = `<p class="carregando aviso">Não foi possível montar as listas agora. Tente de novo em alguns minutos.</p>`;
       return;
     }
     if (p.preparando) {
       // Servidor novo: a base de 2022 do estado ainda está sendo montada.
       const podio = $("#res-podio");
-      if (podio) podio.innerHTML = `<p class="carregando">Preparando as listas de ${esc(UFS[estado.uf] || estado.uf)}. Na primeira vez isso leva até 2 minutos; esta parte atualiza sozinha.</p>`;
-      setTimeout(() => { if ($("#res-podio")) preencherListasResultado(); }, 6000);
+      if (podio) podio.innerHTML = htmlEsperaListas(p);
+      setTimeout(() => { if ($("#res-podio")) preencherListasResultado(); }, 4000);
       return;
     }
+    fimEspera(`listas-${estado.uf}`);
     listasQuiz = { uf: estado.uf, p };
   }
   const podio = $("#res-podio");
@@ -406,23 +437,6 @@ async function preencherListasResultado() {
       <div class="afinidade">${htmlLinhasRanking(com, false)}</div>
       ${sem.length ? `<p class="nota-pequena">Sem bancada na Câmara para comparar: ${listaNatural(sem)}.</p>` : ""}
     </details>` + (top.length ? `<details class="res-todos cartao"><summary>Comparar votação por votação</summary>${htmlVotacaoPorVotacao(top.map((i) => i.g))}</details>` : "");
-}
-
-// Cartão de deputado com as mesmas 6 partes do cartão de lista, para as duas seções ficarem iguais.
-function cartaoPessoa(x, k) {
-  const pcx = pctAfinidade(x);
-  const c = x.d.candidatura;
-  return `<article class="res-top${k === 0 ? " primeiro" : ""}">
-    <span class="res-pos">${k + 1}º lugar</span>
-    <div class="res-pessoa">
-      ${fotoHtml(estado.uf, c.id, x.d.nome, "foto res-foto")}
-      <h4><button type="button" class="link-btn" data-dep-ficha="${c.id}" data-cargo="${c.cargo}">${esc(nomeProprio(x.d.nome))}</button></h4>
-    </div>
-    <div class="chips"><span class="chip">${esc(sigla(x.d.partido))}</span><span class="chip">Nº ${esc(c.numero)}</span></div>
-    ${htmlPctCartao(x)}
-    <div class="trilho"><span class="cheio" style="width:${pcx}%"></span></div>
-    <p class="res-vagas">Disputa ${esc(c.rotulo.toLowerCase())} em 2026</p>
-  </article>`;
 }
 
 // Tabela: cada votação respondida numa linha, a sua resposta e como cada lista do pódio votou.
@@ -468,6 +482,16 @@ function ligarQuiz() {
       quizVisao.i = +ir.dataset.quizIr;
       quizVisao.modo = "perguntas";
       return desenharQuiz(true);
+    }
+    const aba = e.target.closest("[data-res-cargo]");
+    if (aba) {
+      resCargos.cargo = +aba.dataset.resCargo;
+      resCargos.todos = false;
+      return desenharCargosResultado();
+    }
+    if (e.target.closest("[data-res-cargo-todos]")) {
+      resCargos.todos = !resCargos.todos;
+      return desenharCargosResultado();
     }
     const ficha = e.target.closest("[data-dep-ficha]");
     if (ficha) return abrirFicha(+ficha.dataset.cargo, +ficha.dataset.depFicha);

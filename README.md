@@ -24,6 +24,20 @@ Para colocar na internet a partir do próprio computador, sem servidor pago,
 (precisa do `cloudflared` instalado). O endereço `https://....trycloudflare.com`
 aparece na tela e muda cada vez que o túnel reinicia.
 
+## Sócios de empresas (Receita Federal)
+
+Montar o cruzamento de sócios baixa uns 10 GB da Receita e leva perto de uma
+hora, por isso o servidor público não faz isso: ele usa o índice pronto que vai
+junto com o site, em `app/dados_publicos/receita_socios.json.gz` (1,4 MB, sem
+CPF). Uma vez por mês, quando a Receita publica dados novos, atualize no seu
+computador e faça o commit do arquivo:
+
+```
+python app/empresas.py --atualizar
+```
+
+Se o app pessoal já tiver montado o índice do mês, `--empacotar` só empacota.
+
 ## O que o site mostra
 
 - **Cédula**: os votos na ordem da urna, para imprimir ou levar anotado.

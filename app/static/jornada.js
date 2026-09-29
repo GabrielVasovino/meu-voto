@@ -333,6 +333,7 @@ async function desenharGuia() {
   corpo.innerHTML = topoGuia() + html;
   $("#guia-uf")?.addEventListener("change", (e) => {
     $('[data-guia="uf"]').disabled = !e.target.value;
+    aquecerEstado(e.target.value);
   });
   corpo.querySelector("h2")?.focus?.();
 }

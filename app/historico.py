@@ -60,6 +60,7 @@ def _montar_municipal(uf):
     """Votos de cada pessoa na eleição municipal de 2024 (1º turno), pelo título de eleitor. Só o CSV do
     estado é baixado de dentro dos ZIPs nacionais do TSE."""
     pessoas = {}
+    _etapas[uf] = "municipal"
     for r in zipremoto.linhas_csv(URL_CAND_2024, f"consulta_cand_2024_{uf}.csv"):
         if r["CD_CARGO"] not in CARGOS_MUNICIPAIS:
             continue
@@ -96,6 +97,14 @@ def municipal(uf):
 
 
 _preparando = set()
+# Em que passo está a montagem de cada estado, para a tela mostrar o que está acontecendo enquanto espera.
+_etapas = {}
+PASSOS = ("vagas", "votos", "partidos", "candidatos", "municipal")
+
+
+def etapa(uf):
+    """Passo atual da montagem do estado (um de PASSOS), ou None se ainda não começou."""
+    return _etapas.get(uf)
 
 
 def pronto(uf):
@@ -161,6 +170,7 @@ def _montar_base(uf):
     cargos = cargos_proporcionais(uf)
     base = {"cargos": {}, "candidatos": {}}
 
+    _etapas[uf] = "vagas"
     for r in zipremoto.linhas_csv(URL_VAGAS_2022, f"consulta_vagas_2022_{uf}.csv"):
         if int(r["CD_CARGO"]) in cargos:
             base["cargos"][r["CD_CARGO"]] = {
@@ -171,11 +181,13 @@ def _montar_base(uf):
 
     # Votos nominais de cada candidato no 1º turno (inclusive os anulados depois, como o site de resultados contava), somando as zonas eleitorais.
     votos_cand = {}
+    _etapas[uf] = "votos"
     for r in zipremoto.linhas_csv(URL_VOTOS_CAND_2022, f"votacao_candidato_munzona_2022_{uf}.csv"):
         if r["CD_CARGO"] in base["cargos"] and r["NR_TURNO"] == "1":
             sq = r["SQ_CANDIDATO"]
             votos_cand[sq] = votos_cand.get(sq, 0) + int(r["QT_VOTOS_NOMINAIS"] or 0)
 
+    _etapas[uf] = "partidos"
     zip_votos = tse.arquivo(URL_VOTOS_PARTIDO_2022, "historico/votacao_partido_munzona_2022.zip", TTL_HISTORICO)
     for row in _csv_do_zip(zip_votos, f"_{uf}.csv"):
         c = base["cargos"].get(row["CD_CARGO"])
@@ -188,6 +200,7 @@ def _montar_base(uf):
         c["grupo2022"][nr] = f"F{fed}" if fed not in ("-1", "") else nr
         c["nomeGrupo2022"][c["grupo2022"][nr]] = row["SG_FEDERACAO"] if fed not in ("-1", "") else row["SG_PARTIDO"]
 
+    _etapas[uf] = "candidatos"
     zip_cand = tse.arquivo(URL_CAND_2022, "historico/consulta_cand_2022.zip", TTL_HISTORICO)
     for row in _csv_do_zip(zip_cand, f"_{uf}.csv"):
         c = base["cargos"].get(row["CD_CARGO"])

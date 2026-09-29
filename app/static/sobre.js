@@ -43,6 +43,15 @@ function htmlSobreProjeto() {
     <h3>O que o site faz e o que não faz</h3>
     <p>O site mostra dados e comparações com os mesmos critérios para todos os candidatos, de todos os partidos. Ele não recomenda em quem votar, não usa pesquisas de intenção de voto e não leva em conta a posição política de ninguém nas notas: se alguém é mais à esquerda ou à direita é uma decisão sua, e o quiz de afinidade existe justamente para você comparar com a sua opinião.</p>
     <p>Os avisos são fatos que dá para conferir na fonte, nunca acusações. "Vale conferir" quer dizer que algo foge do padrão e merece um olhar, não que houve irregularidade. Cada aviso da ficha traz a fonte e, quando possível, o link para o registro original.</p>
+    <h3>Avisos importantes</h3>
+    <ul>
+      <li><strong>Estimativas não são previsão.</strong> As vagas de cada lista, a ordem dos candidatos dentro dela, quem está "na disputa" e as faixas de chance são calculadas com os votos de 2022 e 2024 e o dinheiro declarado em 2026. Servem para entender como o voto funciona, não para dizer quem vai ganhar, e o resultado real pode ser muito diferente.</li>
+      <li><strong>Não é pesquisa eleitoral.</strong> O site não entrevista eleitores nem mede intenção de voto. As pesquisas eleitorais registradas estão no <a href="https://pesqele-divulgacao.tse.jus.br/" target="_blank" rel="noopener">sistema do TSE</a>, e o resultado oficial é só o divulgado pelo TSE.</li>
+      <li><strong>Avisos não são acusações.</strong> Os pontos para conferir e os alertas são indícios encontrados em dados públicos. Eles não afirmam que alguém cometeu irregularidade nem substituem decisão da Justiça ou dos órgãos de controle.</li>
+      <li><strong>Os dados podem ter erros ou atrasos.</strong> Tudo vem de fontes oficiais, que às vezes corrigem ou atualizam as informações depois. Cruzamentos por nome e CPF parcial podem, raramente, confundir pessoas diferentes. Antes de tirar conclusões, confira no link da fonte que aparece em cada aviso.</li>
+      <li><strong>As notas seguem um método próprio.</strong> A nota geral, a integridade, o desempenho e a afinidade são cálculos deste site, explicados na aba Metodologia, e não uma avaliação oficial. A afinidade usa só ${quizDados?.perguntas?.length || 15} votações da Câmara.</li>
+      <li><strong>Sem ligação com campanhas.</strong> O site não tem ligação com candidatos, partidos ou órgãos públicos e não recomenda em quem votar.</li>
+    </ul>
     <h3>Privacidade</h3>
     <p>A sua cédula e as respostas do quiz ficam guardadas só no seu navegador. O servidor não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
 }
@@ -53,6 +62,14 @@ function htmlSobreMetodologia() {
     <div class="sobre-formula">Integridade = 100 − 20 por ponto para conferir − 50 por alerta sério (mínimo de 0)</div>
     <p>Um <strong>alerta sério</strong> é algo grave e objetivo, como candidatura negada pela Justiça Eleitoral, estar nos cadastros nacionais de punidos, contas julgadas irregulares pelo TCU, estar na lista suja do trabalho escravo ou a campanha pagar uma empresa aberta às vésperas que ficou com grande parte dos gastos. Um <strong>ponto para conferir</strong> é algo que foge do padrão, mas pode ter explicação: patrimônio que cresceu muito acima da inflação enquanto a pessoa tinha mandato, fornecedor com atividade que não combina com o serviço, empresa de outro candidato recebendo da campanha, embargo ambiental, entre outros. Avisos informativos aparecem na ficha, mas não tiram pontos.</p>
     <p>Para não punir campanhas grandes só por serem grandes, o que envolve fornecedores é medido em proporção: um problema com uma empresa só tira pontos se a campanha pagou pelo menos R$ 10 mil ou 10% dos gastos a ela. Por isso um candidato a presidente e um a deputado são comparados com a mesma régua.</p>
+    <h3>Empresas ligadas a candidatos</h3>
+    <p>A Receita Federal publica todo mês os sócios de todas as empresas do país, com o CPF parcialmente escondido. O site cruza esses dados com os candidatos de 2026 pelo nome completo e pelos 6 dígitos do meio do CPF, que o TSE publica, e chega a mais de 10 mil candidatos sócios de empresas. A partir daí aparecem três tipos de aviso:</p>
+    <ul>
+      <li><strong>Fornecedor é empresa de outro candidato:</strong> a campanha pagou uma empresa que tem como sócio alguém que também disputa a eleição de 2026, do mesmo partido ou de outro. Pode ser um serviço comum, mas também é um caminho para o dinheiro de campanha chegar a um aliado. Tira pontos se o valor for relevante (R$ 10 mil ou 10% dos gastos).</li>
+      <li><strong>Campanha pagou empresa do próprio candidato:</strong> a lei permite, mas o dinheiro volta para quem está concorrendo.</li>
+      <li><strong>Empresa do candidato recebeu de outras campanhas ou de emendas:</strong> o outro lado do mesmo cruzamento, somando também as emendas parlamentares pagas a ela.</li>
+    </ul>
+    <p>O cruzamento é refeito todo mês, quando a Receita publica novos dados. Como usa nome e parte do CPF, pode raramente juntar duas pessoas diferentes com o mesmo nome; por isso cada aviso mostra a empresa e o sócio, para conferir.</p>
     <h3>Desempenho no mandato</h3>
     <p>Vale só para quem já é deputado federal ou deputado estadual de São Paulo, que são as casas com dados abertos completos. Em cada critério, a pessoa é comparada com os colegas da mesma casa e recebe uma posição de 0 a 100, em que 50 é o deputado típico. O desempenho é a média dessas posições.</p>
     <ul>

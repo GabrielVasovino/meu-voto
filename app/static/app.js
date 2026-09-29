@@ -86,6 +86,61 @@ async function api(caminho, opcoes) {
   return dados;
 }
 
+// ---------- esperas longas ----------
+
+// Quando o servidor ainda está montando uma base (só na primeira vez), a tela mostra a lista de passos, com o
+// passo atual girando, e há quanto tempo está esperando, para ninguém achar que travou.
+const inicioEspera = new Map();
+
+// passos: [[id, texto], ...]; atual: id do passo em andamento (null = o primeiro).
+function htmlEspera(chave, titulo, passos, atual, nota) {
+  if (!inicioEspera.has(chave)) inicioEspera.set(chave, Date.now());
+  const seg = Math.round((Date.now() - inicioEspera.get(chave)) / 1000);
+  const i = Math.max(0, passos.findIndex(([id]) => id === atual));
+  const itens = passos.map(([, texto], k) => {
+    const st = k < i ? "feito" : k === i ? "agora" : "depois";
+    const marca = st === "feito" ? "✓" : st === "agora" ? "" : String(k + 1);
+    return `<li class="espera-passo ${st}"><span class="espera-marca" aria-hidden="true">${marca}</span>${esc(texto)}</li>`;
+  }).join("");
+  return `<div class="espera" role="status" aria-live="polite">
+    <div class="espera-anim" aria-hidden="true"><span></span><span></span><span></span></div>
+    <h3>${esc(titulo)}</h3>
+    <ol class="espera-passos">${itens}</ol>
+    <p class="espera-nota">${esc(nota)}${seg >= 5 ? ` Esperando há ${seg < 60 ? `${seg} s` : `${Math.floor(seg / 60)} min ${seg % 60} s`}.` : ""}</p>
+  </div>`;
+}
+
+function fimEspera(chave) { inicioEspera.delete(chave); }
+
+// Os passos que o servidor segue para montar a base de deputados de um estado (historico.PASSOS).
+const PASSOS_LISTAS = [
+  ["vagas", "Conferindo quantas vagas de deputado o estado tem"],
+  ["votos", "Somando os votos de cada candidato em 2022"],
+  ["partidos", "Somando os votos de cada partido em 2022"],
+  ["candidatos", "Vendo quem se elegeu em 2022"],
+  ["municipal", "Buscando os votos de vereador e prefeito em 2024"],
+  ["montar", "Montando as listas de 2026"],
+];
+
+function htmlEsperaListas(p) {
+  const nome = UFS[estado.uf] || estado.uf;
+  return htmlEspera(`listas-${estado.uf}`, `Preparando os dados de ${nome}`, PASSOS_LISTAS, p.etapa,
+    "Isso só acontece na primeira vez que alguém abre este estado e leva até 2 minutos. A tela atualiza sozinha.");
+}
+
+// Assim que o estado é conhecido (no guia de boas-vindas ou ao reabrir o site), pede em segundo plano o que as
+// próximas telas vão usar. Na primeira vez o servidor começa a montar os dados deste estado enquanto a pessoa
+// ainda lê o guia ou responde o quiz; nas outras, as respostas já ficam prontas no navegador e no servidor.
+const aquecidos = new Set();
+function aquecerEstado(uf) {
+  if (!uf || aquecidos.has(uf)) return;
+  aquecidos.add(uf);
+  const segundo = uf === "DF" ? 8 : 7;
+  const pedidos = [`/api/quiz?uf=${uf}`, `/api/listas?uf=${uf}&cargo=6`, `/api/listas?uf=${uf}&cargo=${segundo}`,
+    `/api/candidatos?uf=${uf}&cargo=5`, `/api/candidatos?uf=${uf}&cargo=3`, "/api/candidatos?uf=BR&cargo=1"];
+  for (const url of pedidos) fetch(url).catch(() => { /* só adianta o trabalho; a tela pede de novo quando abrir */ });
+}
+
 function ufConsulta(cargo) { return cargo === 1 ? "BR" : estado.uf; }
 
 function fotoHtml(uf, id, nome, classe = "foto") {
@@ -520,7 +575,7 @@ async function carregarMajoritario(item, reordenado = false) {
   try {
     lista = (await api(`/api/candidatos?uf=${ufConsulta(item.cargo)}&cargo=${item.cargo}`)).candidatos;
   } catch (e) {
-    corpo.innerHTML = `<p class="carregando">${esc(e.message)}</p>`;
+    corpo.innerHTML = `<p class="carregando aviso">${esc(e.message)}</p>`;
     return;
   }
   const comAfinidade = await afinidadePronta();
@@ -543,9 +598,9 @@ async function carregarMajoritario(item, reordenado = false) {
     if (filtroMaj.minimo) validos = validos.filter((c) => escolhidos.has(c.id) || (af(c) && pctAfinidade(af(c)) >= filtroMaj.minimo));
     if (filtroMaj.ordem === "afinidade") validos.sort((a, b) => notaAfinidade(af(b)) - notaAfinidade(af(a)));
   }
-  // Ordem por integridade: usa as análises já carregadas; quem ainda não tem nota vai para o fim e,
+  // Ordem pela nota geral: usa as análises já carregadas; quem ainda não tem nota vai para o fim e,
   // quando todas chegam, a tela é redesenhada na ordem certa (ver preencherResumos).
-  const integ = (c) => resumoMajoritario.get(`a-${uf}-${item.cargo}-${c.id}`)?.pontuacao?.integridade;
+  const integ = (c) => resumoMajoritario.get(`a-${uf}-${item.cargo}-${c.id}`)?.pontuacao?.nota;
   let faltaNota = false;
   if (filtroMaj.ordem === "integridade") {
     faltaNota = validos.some((c) => integ(c) == null);
@@ -571,7 +626,7 @@ async function carregarMajoritario(item, reordenado = false) {
         <span class="maj-num" title="Número na urna">${esc(c.numero)}</span>
       </header>
       ${comAfinidade ? `<div class="maj-afin"><span>Afinidade do partido com o seu quiz</span>${celulaAfinidade(af)}</div>` : ""}
-      <div class="maj-afin maj-integ" data-integ="${c.id}"><span>Nota de integridade</span><small class="maj-carregando">calculando…</small></div>
+      <div class="maj-afin maj-integ" data-integ="${c.id}"><span>Nota geral</span><small class="maj-carregando">calculando…</small></div>
       <dl class="maj-resumo" data-resumo="${c.id}"><div class="maj-carregando">Carregando o resumo…</div></dl>
       <p class="maj-sinais" data-sinais="${c.id}"></p>
       <footer class="maj-rodape">
@@ -587,7 +642,7 @@ async function carregarMajoritario(item, reordenado = false) {
         <select id="maj-ordem">
           <option value="nome"${filtroMaj.ordem === "nome" ? " selected" : ""}>Nome (A a Z)</option>
           ${comAfinidade ? `<option value="afinidade"${filtroMaj.ordem === "afinidade" ? " selected" : ""}>Maior afinidade com você</option>` : ""}
-          <option value="integridade"${filtroMaj.ordem === "integridade" ? " selected" : ""}>Maior nota de integridade</option>
+          <option value="integridade"${filtroMaj.ordem === "integridade" ? " selected" : ""}>Maior nota geral</option>
         </select>
       </label>
       ${faltaNota ? `<span class="maj-filtro-aviso">Calculando as notas; a ordem se ajusta quando terminar.</span>` : ""}
@@ -635,6 +690,38 @@ async function carregarMajoritario(item, reordenado = false) {
   });
 }
 
+// ---------- aviso sobre as estimativas ----------
+
+// Vai em toda tela que mostra vagas, ordem ou chance de deputados: é estimativa, não pesquisa nem previsão.
+function htmlAvisoEstimativa(extra = "") {
+  return `<p class="aviso-estimativa"><strong>Estimativa, não previsão.</strong> As vagas de cada lista, a ordem dos candidatos e as faixas de chance são calculadas com os votos de 2022 e 2024 e o dinheiro declarado em 2026. Não são pesquisa eleitoral nem resultado, e o resultado real pode ser bem diferente.${extra} <button type="button" class="link-btn" data-abrir-sobre="metodologia">Como é calculado</button></p>`;
+}
+
+// ---------- notas: o mesmo formato em todo o site ----------
+
+// "Nota geral" é a nota que aparece nos cartões: a integridade e, para quem tem mandato de deputado, o desempenho.
+// Ao abrir a ficha ou a lista, aparecem as três (geral, integridade e desempenho), sempre nesta mesma linha.
+const EXPLICA_NOTA_GERAL = "Nota geral, de 0 a 100: junta a integridade (começa em 100 e perde pontos por indício encontrado nos dados públicos) e, para quem já é deputado, o desempenho no mandato.";
+
+// Cor da nota geral, igual em todo o site (barra e anel em volta da foto): verde sem nada relevante, amarelo com
+// algo para conferir (um aviso tira 20 pontos) e vermelho com alerta sério ou vários avisos somados.
+function nivelNota(nota) {
+  if (nota == null) return null;
+  return nota >= 85 ? "ok" : nota >= 60 ? "conferir" : "serio";
+}
+
+function celulaNota(valor, titulo = "") {
+  const n = Math.round(valor);
+  const nivel = nivelNota(n);
+  return `<span class="afin-mini integ-${nivel}" title="${esc(titulo)}">
+    <span class="trilho"><span class="cheio" style="width:${Math.max(n, 2)}%"></span></span><b>${n}<small>/100</small></b></span>`;
+}
+
+function linhaNota(rotulo, valor, { titulo = "", vazio = "Sem dados", attrs = "" } = {}) {
+  return `<div class="maj-afin" ${attrs}><span>${rotulo}</span>${valor == null
+    ? `<small class="sem-afinidade">${esc(vazio)}</small>` : celulaNota(valor, titulo)}</div>`;
+}
+
 // Cor do anel da foto e da barra de integridade, igual em todas as telas: vermelho com alerta sério ou integridade
 // abaixo de 50 (vários pontos para conferir somam tanto quanto um alerta); amarelo com algo para conferir; verde sem nada.
 function nivelAnel(alertas, atencoes, integridade) {
@@ -650,18 +737,13 @@ function nivelIntegridade(a) {
 function pintarIntegridade(card, a) {
   if (!card) return;
   const cel = card.querySelector("[data-integ]");
-  const nota = a?.pontuacao?.integridade;
+  const nota = a?.pontuacao?.nota;
   if (nota == null) {
     cel?.remove();
     return;
   }
-  const nivel = nivelIntegridade(a);
-  card.querySelector(".maj-foto")?.classList.add(`anel-${nivel}`);
-  if (cel) {
-    cel.innerHTML = `<span>Nota de integridade</span>
-      <span class="afin-mini integ-${nivel}" title="Parte de 100 e perde 20 pontos por ponto para conferir e 50 por alerta sério. Os detalhes estão na ficha.">
-        <span class="trilho"><span class="cheio" style="width:${Math.max(nota, 2)}%"></span></span><b>${nota}<small>/100</small></b></span>`;
-  }
+  card.querySelector(".maj-foto")?.classList.add(`anel-${nivelNota(nota)}`);
+  if (cel) cel.innerHTML = `<span>Nota geral</span>${celulaNota(nota, `${EXPLICA_NOTA_GERAL} A ficha mostra as duas partes.`)}`;
 }
 
 async function preencherResumos(item, uf, lista, rotuloVice) {
@@ -787,6 +869,7 @@ async function iniciar() {
       estado.quiz = salvo.quiz || {};
       estado.guiaVisto = !!salvo.guiaVisto;
       sel.value = estado.uf;
+      aquecerEstado(estado.uf);
       montarCedula();
     }
   } catch { /* primeira vez */ }
@@ -811,6 +894,7 @@ function trocarUf(uf) {
   estado.uf = uf;
   estado.votos = {};
   ajuda.grupo = null;
+  aquecerEstado(uf);
   $("#uf").value = uf;
   if (estado.uf) montarCedula();
   else { $("#cedula").hidden = true; $("#futuro").hidden = true; $("#jornada").hidden = true; }
