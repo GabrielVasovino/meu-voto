@@ -403,7 +403,7 @@ details.mais > summary { cursor: pointer; font-weight: 600; font-size: .88rem; c
   font: inherit; font-weight: 600; font-size: .88rem; color: var(--accent-ink); background: none; border: 0;
   padding: 0; margin-top: 12px; cursor: pointer; display: inline-flex; gap: 4px; align-items: center;
 }
-details.como-ler { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 12px 16px; margin-top: 8px; font-size: .9rem; }
+details.como-ler { background: var(--surface); border: 1px dashed var(--border); border-radius: 14px; padding: 12px 16px; margin: 16px 0 20px; font-size: .9rem; }
 details.como-ler summary { cursor: pointer; font-weight: 600; }
 details.como-ler ul { list-style: none; padding: 0; display: grid; gap: 8px; }
 .esqueleto { display: flex; align-items: center; gap: 10px; color: var(--text-3); font-size: .9rem; padding: 16px 0; }
