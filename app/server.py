@@ -489,6 +489,7 @@ def main():
     ap.add_argument("--sem-navegador", action="store_true")
     ap.add_argument("--tailscale", action="store_true", help="aceita aparelhos da sua rede Tailscale")
     ap.add_argument("--publico", action="store_true", help="versão para outras pessoas: sem login e sem guardar votos")
+    ap.add_argument("--host", default="127.0.0.1", help="endereço de escuta (use 0.0.0.0 em contêiner)")
     ap.add_argument("--cache", help="pasta do cache de dados públicos (padrão: ~/.meuvoto/cache)")
     args = ap.parse_args()
     MODO["publico"] = args.publico
@@ -508,7 +509,7 @@ def main():
         if args.tailscale:
             servidor = ServidorTailscale(("0.0.0.0", args.porta), Handler)
         else:
-            servidor = ThreadingHTTPServer(("127.0.0.1", args.porta), Handler)
+            servidor = ThreadingHTTPServer((args.host, args.porta), Handler)
     except OSError:
         sys.exit(f"A porta {args.porta} já está em uso. O app já está aberto? Tente --porta 8766.")
 
