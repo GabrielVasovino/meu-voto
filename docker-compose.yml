@@ -1,0 +1,21 @@
+services:
+  voto-informado:
+    build: .
+    container_name: voto_informado
+    restart: unless-stopped
+    # Sem porta publicada: o nginx do ariewill encaminha o domínio para cá pela rede "web".
+    expose:
+      - "8765"
+    volumes:
+      # Cache de dados públicos (centenas de MB na primeira vez)
+      - cache:/cache
+    networks:
+      - web
+
+networks:
+  web:
+    # Rede compartilhada com o nginx do ariewill (criada uma vez: docker network create web)
+    external: true
+
+volumes:
+  cache:
