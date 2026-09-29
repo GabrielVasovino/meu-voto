@@ -28,7 +28,7 @@ jobs:
             echo "iniciando o deploy no servidor..."
 
             if [ ! -d "meu-voto" ]; then 
-              echo "Clonando repositorio meu-voto..."
+              echo "Clonando repositório meu-voto..."
               git clone git@github.com:GabrielVasovino/meu-voto.git meu-voto
             fi
 
@@ -37,6 +37,9 @@ jobs:
             echo "Puxando últimas alterações da branch main..."
             git fetch origin
             git reset --hard origin/main
+
+            echo "Garantindo a rede compartilhada com o nginx..."
+            docker network inspect web >/dev/null 2>&1 || docker network create web
 
             echo "Reconstruindo e subindo os containers..."
             docker compose up -d --build
