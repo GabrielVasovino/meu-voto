@@ -41,7 +41,7 @@ function htmlSobreProjeto() {
     <h3>Por que o voto para deputado merece mais atenção</h3>
     <p>É o voto que costuma receber menos atenção, mesmo sendo a Câmara e as Assembleias que aprovam as leis, o orçamento e os impostos. Ele vai primeiro para a lista, que é o partido ou a federação, e ajuda a eleger outras pessoas dessa lista, não só quem recebeu o voto. Por isso o site mostra quantas vagas cada lista deve ganhar e quem as ocuparia: o seu voto pode ajudar a eleger alguém que você nem conhece.</p>
     <h3>O que o site faz e o que não faz</h3>
-    <p>O site mostra dados e comparações com os mesmos critérios para todos os candidatos, de todos os partidos. Ele não recomenda em quem votar, não usa pesquisas de intenção de voto e não leva em conta a posição política de ninguém nas notas: se alguém é mais à esquerda ou à direita é uma decisão sua, e o quiz de afinidade existe justamente para você comparar com a sua opinião.</p>
+    <p>O site mostra dados e comparações com os mesmos critérios para todos os candidatos, de todos os partidos. Ele não recomenda em quem votar, não usa pesquisas de intenção de voto e não leva em conta a posição política de ninguém nas notas: se alguém é mais à esquerda ou à direita é uma decisão sua, e o questionário de afinidade existe justamente para você comparar com a sua opinião.</p>
     <p>Os avisos são fatos que dá para conferir na fonte, nunca acusações. "Vale conferir" quer dizer que algo foge do padrão e merece um olhar, não que houve irregularidade. Cada aviso da ficha traz a fonte e, quando possível, o link para o registro original.</p>
     <h3>Avisos importantes</h3>
     <ul>
@@ -53,7 +53,7 @@ function htmlSobreProjeto() {
       <li><strong>Sem ligação com campanhas.</strong> O site não tem ligação com candidatos, partidos ou órgãos públicos e não recomenda em quem votar.</li>
     </ul>
     <h3>Privacidade</h3>
-    <p>A sua cédula e as respostas do quiz ficam guardadas só no seu navegador. O servidor não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
+    <p>A sua cédula e as respostas do questionário ficam guardadas só no seu navegador. O servidor não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
 }
 
 function htmlSobreMetodologia() {
@@ -89,8 +89,8 @@ function htmlSobreMetodologia() {
       <li>Ordena os candidatos de cada lista por uma força de 0 a 100: metade vem da maior votação recente da pessoa (deputado em 2022 ou vereador e prefeito em 2024) e metade do dinheiro arrecadado em 2026, sempre em comparação com o melhor da mesma lista.</li>
     </ol>
     <p>Aplicada à eleição de 2022, a conta das vagas acertou 1.536 das 1.572 vagas de deputado federal e estadual do país (97,7%). A ordem dentro de cada lista é bem mais incerta: testando com 2022 em São Paulo e Minas Gerais, ela acertou 211 dos 294 eleitos (71,8%). Por isso cada pessoa aparece numa faixa de chance: na faixa "Alta", cerca de 7 em cada 10 se elegeram no teste; na "Disputada", 3 em cada 10; na "Baixa", 1 em cada 10; e na "Muito baixa", 1 em cada 100.</p>
-    <h3>Afinidade do quiz</h3>
-    <p>O quiz usa ${quizDados?.perguntas?.length || 15} votações nominais do plenário da Câmara, de 2023 a 2026, escolhidas por terem placar disputado e temas variados. Responder "Concordo" equivale a votar Sim. Ficaram de fora votações em que lados opostos votaram igual por motivos opostos, porque um Sim ou Não não representaria a posição de ninguém.</p>
+    <h3>Afinidade do questionário</h3>
+    <p>O questionário usa ${quizDados?.perguntas?.length || 15} votações nominais do plenário da Câmara, de 2023 a 2026, escolhidas por terem placar disputado e temas variados. Responder "Concordo" equivale a votar Sim. Ficaram de fora votações em que lados opostos votaram igual por motivos opostos, porque um Sim ou Não não representaria a posição de ninguém.</p>
     <div class="sobre-formula">Afinidade = votações em que a bancada votou como você ÷ votações que você respondeu e em que a bancada tinha posição clara</div>
     <ul>
       <li>A posição de um partido é a da maioria da bancada, quando pelo menos 3 deputados votaram e não houve empate.</li>
@@ -108,7 +108,7 @@ function htmlSobreDados() {
     </div>
     <p>Achou um dado errado ou um aviso injusto? Abra uma <a href="${REPOSITORIO}/issues" target="_blank" rel="noopener">issue no GitHub</a> explicando o caso, com o link da fonte se tiver.</p>
     <h3>De onde vêm os dados</h3>
-    <p>Tudo vem de fontes públicas oficiais, baixadas e atualizadas automaticamente pelo servidor. Nada é digitado à mão, exceto os textos explicativos do quiz, que citam as fontes em cada votação.</p>
+    <p>Tudo vem de fontes públicas oficiais, baixadas e atualizadas automaticamente pelo servidor. Nada é digitado à mão, exceto os textos explicativos do questionário, que citam as fontes em cada votação.</p>
     <ul>
       <li><strong>TSE:</strong> candidaturas, bens declarados, histórico eleitoral, prestação de contas de campanha e resultados de 2022 e 2024.</li>
       <li><strong>Câmara dos Deputados e ALESP:</strong> votações, presença, projetos, relatorias, cota parlamentar e verba de gabinete.</li>

@@ -1,19 +1,19 @@
 "use strict";
 
-// Quiz de afinidade: uma votação por vez, com barra de progresso, e o resultado numa tela
+// Questionário de afinidade: uma votação por vez, com barra de progresso, e o resultado numa tela
 // própria. Como as bancadas votaram só aparece depois da resposta, para não influenciar.
 
 let quizDados = null;
 const quizVisao = { modo: null, i: 0, uf: null }; // modo: "perguntas" ou "resultado"
 let listasQuiz = null;
 
-// Votações do quiz e como cada partido votou. Devolve null enquanto a Câmara ainda está sendo preparada.
+// Votações do questionário e como cada partido votou. Devolve null enquanto a Câmara ainda está sendo preparada.
 async function carregarQuizDados() {
   if (quizDados && quizDados.uf === estado.uf) return quizDados;
   const d = await api(`/api/quiz?uf=${estado.uf}`);
   if (!d.pronto) return null;
   quizDados = { uf: estado.uf, ...d };
-  // Respostas de votações que saíram do quiz não contam mais: são descartadas.
+  // Respostas de votações que saíram do questionário não contam mais: são descartadas.
   const validas = new Set(d.perguntas.map((q) => q.id));
   const antigas = Object.keys(estado.quiz || {}).filter((id) => !validas.has(id));
   if (antigas.length) {
@@ -107,21 +107,36 @@ function desenharPergunta() {
       <p class="quiz-tema">${esc(q.tema)}</p>
       <h3 class="quiz-afirmacao">${esc(q.afirmacao)}</h3>
       <p class="quiz-contexto">${esc(q.contexto)} Placar na Câmara: ${q.sim} a ${q.nao}.</p>
-      <div class="quiz-guia">${htmlGuiaPergunta(q)}</div>
+      ${htmlEfeitos(q)}
       ${q.nota ? `<p class="quiz-nota"><strong>Para não confundir:</strong> ${esc(q.nota)}</p>` : ""}
-      ${htmlEntenda(q)}
+      ${htmlMaisContexto(q)}
       <div class="quiz-respostas" role="group" aria-label="Sua resposta">
         ${botao(1, "Concordo", "concordo")}${botao(-1, "Discordo", "discordo")}${botao(0, "Não sei, prefiro pular", "pular")}
       </div>
       ${respondeu ? htmlComoVotaram(q) : ""}
+      ${respondeu && [3, 8].includes(n) ? htmlJaDaParaVer(n, perguntas.length, ultima) : ""}
     </article>
     <div class="quiz-nav">
       ${i > 0 ? `<button type="button" class="btn" data-quiz="anterior">← Anterior</button>` : "<span></span>"}
       ${seguir}
     </div>
     ${ultima && n < 3 ? `<p class="nota-pequena quiz-nota-fim">Responda pelo menos 3 votações para ver o resultado. Toque nos traços acima para voltar a uma delas.</p>` : ""}
-    <p class="quiz-pular"><button type="button" class="link-btn" data-ir-passo="dep_federal">Pular o quiz e ir para Deputado(a) federal</button></p>
+    <p class="quiz-pular"><button type="button" class="link-btn" data-ir-passo="dep_federal">Pular o questionário e ir para Deputado(a) federal</button></p>
     <details class="metodo quiz-metodo"><summary>Como as votações foram escolhidas</summary><p>${esc(quizDados.criterio)}${quizDados.atualizadoEm ? ` Os textos de contexto foram revisados em ${esc(quizDados.atualizadoEm)}.` : ""}</p></details>
+  </div>`;
+}
+
+// Aparece logo depois da 3ª resposta (e de novo na 8ª): sem barreira, quem quiser já pode ver o resultado.
+function htmlJaDaParaVer(n, total, ultima) {
+  const texto = n === 3
+    ? "Com 3 respostas já dá para ver com quais partidos e candidatos você se parece mais."
+    : `Você já respondeu ${n} das ${total}. O resultado fica mais preciso a cada resposta, mas já dá para ver.`;
+  return `<div class="quiz-ja" role="status">
+    <p><strong>Pronto!</strong> ${texto}</p>
+    <div class="quiz-ja-acoes">
+      <button type="button" class="btn primario" data-quiz="resultado">Ver meu resultado</button>
+      ${ultima ? "" : `<button type="button" class="btn" data-quiz="proxima">Continuar respondendo</button>`}
+    </div>
   </div>`;
 }
 
@@ -132,10 +147,20 @@ function itemEfeito(texto) {
   return `<li><strong>${esc(texto.slice(0, i))}</strong> ${esc(texto.slice(i + 2))}</li>`;
 }
 
-// As quatro partes, sempre na mesma ordem, que a pessoa lê antes de responder.
-function htmlGuiaPergunta(q) {
-  const secao = (n, titulo, corpo) => corpo
-    ? `<section class="quiz-sec"><h4><span class="quiz-sec-n" aria-hidden="true">${n}</span>${titulo}</h4>${corpo}</section>` : "";
+// Logo abaixo da pergunta, o que mais ajuda a decidir: quem tende a ganhar e quem tende a perder.
+function htmlEfeitos(q) {
+  if (!q.ganha?.length && !q.perde?.length) return "";
+  return `<section class="quiz-sec quiz-sec-efeitos"><h4>Quem tende a ganhar e a perder</h4>
+    <div class="quiz-efeitos">
+      <div class="quiz-efeito ganha"><p class="quiz-lado-tit">Quem tende a ganhar</p><ul>${(q.ganha || []).map(itemEfeito).join("")}</ul></div>
+      <div class="quiz-efeito perde"><p class="quiz-lado-tit">Quem tende a perder</p><ul>${(q.perde || []).map(itemEfeito).join("")}</ul></div>
+    </div></section>`;
+}
+
+// O resto fica recolhido em "Preciso de mais contexto", para a tela ter menos texto e a pessoa poder responder logo.
+// Continua aberto ao responder (a tela é redesenhada) enquanto for a mesma pergunta.
+function htmlMaisContexto(q) {
+  const secao = (titulo, corpo) => corpo ? `<section class="quiz-sec"><h4>${titulo}</h4>${corpo}</section>` : "";
   // Partidos e governo ficam de fora até a resposta, para não influenciar: aqui só os argumentos e, quando há,
   // quem apoiava de fora do Congresso (sindicatos, organizações). Como cada bancada votou aparece depois.
   const ladoHtml = (classe, titulo, l) => l ? `<div class="quiz-lado ${classe}">
@@ -143,35 +168,27 @@ function htmlGuiaPergunta(q) {
       ${l.quem ? `<p class="quiz-lado-quem">Fora do Congresso: ${esc(l.quem)}</p>` : ""}
       <ul>${l.argumentos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
     </div>` : "";
-  // ladoSim/ladoNao: sim e nao já são o placar da votação.
   const lados = q.ladoSim || q.ladoNao
     ? `<div class="quiz-lados">${ladoHtml("sim", "Quem concordava <small>(votou Sim)</small>", q.ladoSim)}${ladoHtml("nao", "Quem discordava <small>(votou Não)</small>", q.ladoNao)}</div>` : "";
-  const efeitos = q.ganha?.length || q.perde?.length ? `<div class="quiz-efeitos">
-      <div class="quiz-efeito ganha"><p class="quiz-lado-tit">Quem tende a ganhar</p><ul>${(q.ganha || []).map(itemEfeito).join("")}</ul></div>
-      <div class="quiz-efeito perde"><p class="quiz-lado-tit">Quem tende a perder</p><ul>${(q.perde || []).map(itemEfeito).join("")}</ul></div>
-    </div>` : "";
   const pratica = q.pratica
     ? `<p>${esc(q.pratica)}</p>${q.incerto ? `<p class="quiz-incerto"><strong>Ainda em aberto:</strong> ${esc(q.incerto)}</p>` : ""}` : "";
-  return secao(1, "Como chegou a essa votação", q.historia ? `<p>${esc(q.historia)}</p>` : "")
-    + secao(2, "O que muda na prática", pratica)
-    + secao(3, "Os argumentos de cada lado", lados)
-    + secao(4, "Quem tende a ganhar e a perder", efeitos);
-}
-
-// Desfecho, ementa oficial e fontes ficam recolhidos.
-function htmlEntenda(q) {
   const p = q.proposicao;
   const link = (url, nome) => `<a href="${esc(url)}" target="_blank" rel="noopener">${esc(nome)}</a>`;
   const fontes = [p ? link(p.link, `Ficha do ${p.nome} na Câmara`) : "", ...(q.fontes || []).map((f) => link(f.url, f.nome))]
     .filter(Boolean).join("");
   const situacao = p?.situacao
     ? `<p class="situacao">No sistema da Câmara, o último registro é "${esc(p.situacao)}"${p.dataSituacao ? `, de ${esc(dataBr(p.dataSituacao))}` : ""}. Esse registro às vezes não acompanha o que aconteceu depois no Senado ou na sanção, por isso vale o desfecho descrito acima.</p>` : "";
-  return `<details class="entenda">
-    <summary>O que aconteceu depois e fontes</summary>
-    <p>${esc(q.depois)}</p>
-    ${situacao}
+  const depois = `${q.depois ? `<p>${esc(q.depois)}</p>` : ""}${situacao}
     ${p?.ementa ? `<p class="ementa">Ementa oficial: “${esc(p.ementa)}”</p>` : ""}
-    ${fontes ? `<div class="links">${fontes}</div>` : ""}
+    ${fontes ? `<div class="links">${fontes}</div>` : ""}`;
+  return `<details class="quiz-mais" data-contexto="${esc(q.id)}"${quizVisao.contexto === q.id ? " open" : ""}>
+    <summary>Preciso de mais contexto</summary>
+    <div class="quiz-guia">
+      ${secao("Como chegou a essa votação", q.historia ? `<p>${esc(q.historia)}</p>` : "")}
+      ${secao("O que muda na prática", pratica)}
+      ${secao("Os argumentos de cada lado", lados)}
+      ${secao("O que aconteceu depois e fontes", depois)}
+    </div>
   </details>`;
 }
 
@@ -198,7 +215,7 @@ function htmlComoVotaram(q) {
 
 function linhaAfinidade(nome, sub, x, atributos = "") {
   const p = pctAfinidade(x);
-  return `<div class="linha" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
+  return `<div class="linha" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do questionário">
     <span class="nome">${nome}${sub ? `<small>${sub}</small>` : ""}</span>
     <span class="linha-barra"><span class="trilho"><span class="cheio" style="width:${p}%"></span></span><b ${atributos}>${p}%</b></span>
   </div>`;
@@ -206,7 +223,7 @@ function linhaAfinidade(nome, sub, x, atributos = "") {
 
 // O número grande dos cartões do pódio, sempre dizendo o que é.
 function htmlPctCartao(x) {
-  return `<div class="res-pc" title="Votou como você em ${x.a} de ${x.n} ${x.n === 1 ? "votação" : "votações"} do quiz"><strong>${pctAfinidade(x)}%</strong><span>de afinidade</span></div>`;
+  return `<div class="res-pc" title="Votou como você em ${x.a} de ${x.n} ${x.n === 1 ? "votação" : "votações"} do questionário"><strong>${pctAfinidade(x)}%</strong><span>de afinidade</span></div>`;
 }
 
 // Ordena com um pequeno ajuste para quem tem poucas votações em comum (regra de Laplace).
@@ -287,7 +304,7 @@ function desenharResultado() {
       <button type="button" class="btn primario" data-ir-passo="dep_federal">Seguir para Deputado(a) federal →</button>
     </div>
     <div class="res-rodape">
-      <p class="nota-pequena">A comparação usa só estas ${perguntas.length} votações da Câmara. <button type="button" class="link-btn" data-abrir-sobre="metodologia">Como a afinidade é calculada</button>. <button type="button" class="link-btn quiz-refazer" data-quiz="refazer">Apagar as respostas e refazer o quiz</button></p>
+      <p class="nota-pequena">A comparação usa só estas ${perguntas.length} votações da Câmara. <button type="button" class="link-btn" data-abrir-sobre="metodologia">Como a afinidade é calculada</button>. <button type="button" class="link-btn quiz-refazer" data-quiz="refazer">Apagar as respostas e refazer o questionário</button></p>
     </div>
   </div>`;
   preencherListasResultado();
@@ -297,7 +314,7 @@ function desenharResultado() {
 // Cartão pequeno de um partido: sigla, porcentagem e uma barra fina.
 function cartaoPartido([s, x]) {
   const p = pctAfinidade(x);
-  return `<div class="partido-card" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
+  return `<div class="partido-card" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do questionário">
     <span class="partido-sigla">${esc(sigla(s))}</span>
     <strong>${p}%</strong>
     <span class="partido-trilho"><span style="width:${p}%"></span></span>
@@ -350,7 +367,7 @@ function desenharCargosResultado() {
       <span class="res-cand-pos">${k + 4}º</span>
       ${fotoHtml(uf, c.id, c.nomeUrna, "foto res-cand-foto")}
       <span class="res-cand-nome">${nome(c)}<small>${esc(c.partido)}, número ${esc(c.numero)}</small></span>
-      ${x ? `<span class="linha-barra" title="${pctAfinidade(x)}% de afinidade: o partido votou como você em ${x.a} de ${x.n} votações do quiz"><span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%</b></span>`
+      ${x ? `<span class="linha-barra" title="${pctAfinidade(x)}% de afinidade: o partido votou como você em ${x.a} de ${x.n} votações do questionário"><span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%</b></span>`
         : `<span class="res-cand-sem">Partido sem bancada na Câmara</span>`}
     </li>`;
   const resto = itens.slice(3);
@@ -465,6 +482,11 @@ let quizLigado = false;
 function ligarQuiz() {
   if (quizLigado) return;
   quizLigado = true;
+  // Lembra se "Preciso de mais contexto" está aberto, para não fechar ao responder.
+  $("#quiz-corpo").addEventListener("toggle", (e) => {
+    const d = e.target.closest?.("[data-contexto]");
+    if (d) quizVisao.contexto = d.open ? d.dataset.contexto : null;
+  }, true);
   $("#quiz-corpo").addEventListener("click", (e) => {
     const resp = e.target.closest("[data-quiz-resp]");
     if (resp) {
@@ -474,7 +496,7 @@ function ligarQuiz() {
       else estado.quiz[q.id] = v;
       salvar();
       desenharPergunta();
-      $(".como-votaram")?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      ($(".quiz-ja") || $(".como-votaram"))?.scrollIntoView({ block: "nearest", behavior: "smooth" });
       return;
     }
     const ir = e.target.closest("[data-quiz-ir]");
@@ -502,7 +524,7 @@ function ligarQuiz() {
     if (acao === "resultado") quizVisao.modo = "resultado";
     if (acao === "revisar") { quizVisao.modo = "perguntas"; quizVisao.i = primeiraSemResposta(); }
     if (acao === "refazer") {
-      if (!confirm("Apagar todas as suas respostas do quiz e começar de novo?")) return;
+      if (!confirm("Apagar todas as suas respostas do questionário e começar de novo?")) return;
       estado.quiz = {};
       salvar();
       quizVisao.modo = "perguntas";

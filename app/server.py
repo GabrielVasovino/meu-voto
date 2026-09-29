@@ -6,7 +6,7 @@ A cédula fica salva só neste computador, em dados/cedula.json.
 Com --tailscale, aceita também aparelhos da sua rede Tailscale (100.64.0.0/10),
 como o tablet; qualquer outro endereço é recusado antes de chegar ao app.
 
-Com --publico, é a versão para outras pessoas: sem login, e a cédula e o quiz ficam só no navegador de
+Com --publico, é a versão para outras pessoas: sem login, e a cédula e o questionário ficam só no navegador de
 cada pessoa; o servidor não recebe nem guarda votos.
 
 Uso: python app/server.py [--porta 8765] [--sem-navegador] [--tailscale] [--publico]

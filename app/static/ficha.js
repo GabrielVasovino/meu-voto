@@ -324,9 +324,6 @@ function painelResumo() {
   return `<p class="painel-intro">O essencial sobre esta candidatura. Clique em qualquer cartão para ver os detalhes.</p>
     <div class="resumo-grid">${cartoes.map(htmlCartao).join("")}${!a && !ficha.erroAnalise ? `<div class="rcard rcard-carregando">${esqueleto("Calculando chance, posições e alertas…")}</div>` : ""}</div>
     ${ficha.erroAnalise ? `<p class="erro">Não foi possível montar a análise: ${esc(ficha.erroAnalise)}</p>` : ""}
-    ${a?.pontuacao?.nota != null ? htmlBlocoPontuacao(a.pontuacao) : ""}
-    ${blocoDestaques}
-    ${a?.chance?.candidato?.posicao ? htmlBlocoChance(a.chance) : ""}
     <details class="como-ler"><summary>Como ler esta ficha</summary>
       <p>Ao lado de cada parte há um quadro chamado <strong>Como ler isto</strong>, que resume o que o número quer dizer. Ele vem com uma etiqueta:</p>
       <ul>
@@ -336,44 +333,46 @@ function painelResumo() {
         <li><span class="leitura-tag tom-alerta">Merece atenção</span> quando os dados públicos mostram algo mais sério.</li>
         <li><span class="leitura-tag tom-neutro">Para contexto</span> quando o dado depende da sua opinião, como o alinhamento com o governo.</li>
       </ul>
-    </details>`;
-}
-
-function barraNota(rotulo, valor, extra = "") {
-  return `<div class="nota-barra"><span class="nota-rot">${rotulo}</span>
-    <span class="trilho"><span class="cheio" style="width:${valor}%"></span><span class="marca-meio" title="Deputado típico"></span></span>
-    <b>${valor}</b>${extra}</div>`;
+    </details>
+    ${a?.pontuacao?.nota != null ? htmlBlocoPontuacao(a.pontuacao) : ""}
+    ${blocoDestaques}
+    ${a?.chance?.candidato?.posicao ? htmlBlocoChance(a.chance) : ""}`;
 }
 
 function htmlBlocoPontuacao(p) {
-  const descontos = p.descontos.length
-    ? `<ul class="descontos">${p.descontos.map((d) => `<li><span class="leitura-tag tom-${d.nivel}">−${d.pontos}</span> ${esc(d.titulo)}</li>`).join("")}</ul>`
-    : `<p class="explica">Nenhum desconto: os dados públicos não mostram alertas de integridade.</p>`;
+  const ajuste = p.desempenho != null ? p.nota - p.integridade : 0;
   const casa = p.casa === "estadual" ? "deputados estaduais de São Paulo" : "deputados federais";
-  const criterios = p.criterios ? `<p class="nota-sub">Desempenho no mandato, comparado aos outros ${casa}. O traço no meio de cada barra marca o deputado típico.</p>
-      <div class="nota-barras">${p.criterios.map((c) => barraNota(c.rotulo + (c.peso > 1 ? " <small>(vale em dobro)</small>" : ""), Math.round(100 * c.valor))).join("")}</div>` : "";
-  const ajuste = p.desempenho != null ? Math.round(0.4 * (p.desempenho - 50)) : 0;
-  let texto = `A nota geral é ${p.nota}. A integridade ficou em ${p.integridade}`;
-  texto += p.descontos.length
-    ? ` e perdeu ${100 - p.integridade} pontos por ${p.descontos.length === 1 ? "um indício encontrado" : `${p.descontos.length} indícios encontrados`} nos dados públicos.`
-    : ", sem nenhum desconto.";
-  if (p.desempenho != null) {
-    texto += ` O desempenho no mandato ficou em ${p.desempenho}, ${ajuste === 0 ? "igual ao de um deputado típico, e não mudou a nota" : ajuste > 0 ? `acima de um deputado típico, e somou ${ajuste} pontos` : `abaixo de um deputado típico, e tirou ${-ajuste} pontos`}.`;
-  }
-  return secao("Nota geral", `
-      <div class="nota-topo">
-        <div class="nota-grande"><strong>${p.nota}</strong><span>de 100</span></div>
-        <div class="nota-barras">
-          ${barraNota("Integridade", p.integridade)}
-          ${p.desempenho != null ? barraNota("Desempenho", p.desempenho) : `<p class="explica">Sem desempenho no mandato para avaliar, porque não tem mandato de deputado federal nem de deputado estadual em São Paulo.</p>`}
-        </div>
-      </div>
-      <p class="nota-sub">O que tirou pontos da integridade:</p>
-      ${descontos}
-      ${criterios}`,
-  leitura("neutro", texto,
-    "A integridade começa em 100 e perde 20 pontos por indício que vale conferir e 50 por alerta sério. Para quem tem mandato, o desempenho soma ou tira até 20 pontos. Projeto simbólico, como homenagem ou nome de viaduto, pesa em dobro no desempenho. A posição política não entra na conta."),
-  "bloco-pontuacao");
+  // As três notas no mesmo formato das outras telas; embaixo, de onde sai cada uma.
+  const notas = `<div class="notas-lista">
+      ${linhaNota("<strong>Nota geral</strong>", p.nota, { titulo: EXPLICA_NOTA_GERAL })}
+      ${linhaNota("Integridade", p.integridade, { titulo: "Começa em 100 e perde 20 pontos por ponto para conferir e 50 por alerta sério." })}
+      ${linhaNota("Desempenho no mandato", p.desempenho, { vazio: "Não tem mandato de deputado", titulo: `Comparado aos outros ${casa}; 50 é o deputado típico.` })}
+    </div>`;
+  const conta = p.desempenho != null
+    ? `<p class="nota-conta">Nota geral = integridade ${p.integridade} ${ajuste >= 0 ? "+" : "−"} ${Math.abs(ajuste)} do desempenho = <strong>${p.nota}</strong>. O desempenho soma ou tira até 20 pontos: acima do deputado típico soma, abaixo tira.</p>`
+    : `<p class="nota-conta">Sem mandato de deputado para avaliar, a nota geral é a própria integridade: <strong>${p.nota}</strong>.</p>`;
+  const integridade = `<div class="nota-parte">
+      <h4>Integridade <b>${p.integridade}<small>/100</small></b></h4>
+      <p class="explica">Começa em 100. Cada ponto para conferir tira 20 e cada alerta sério tira 50.</p>
+      ${p.descontos.length
+        ? `<ul class="descontos">${p.descontos.map((d) => `<li><span class="leitura-tag tom-${d.nivel}">−${d.pontos}</span> ${esc(d.titulo)}</li>`).join("")}</ul>`
+        : `<p class="nota-ok-texto">Nenhum desconto: os dados públicos não mostram nada que tire pontos.</p>`}
+    </div>`;
+  const desempenho = `<div class="nota-parte">
+      <h4>Desempenho no mandato ${p.desempenho != null ? `<b>${p.desempenho}<small>/100</small></b>` : ""}</h4>
+      ${p.criterios
+        ? `<p class="explica">Posição entre os ${casa} em cada critério: 50 é o deputado típico, 100 é o melhor.</p>
+          <div class="notas-lista">${p.criterios.map((c) => linhaPosicao(c.rotulo + (c.peso > 1 ? " <small>(vale em dobro)</small>" : ""), Math.round(100 * c.valor))).join("")}</div>`
+        : `<p class="explica">Só existe para quem já é deputado federal ou deputado estadual em São Paulo, onde há dados abertos de presença, projetos e gastos.</p>`}
+    </div>`;
+  return secao("Nota geral", `${notas}${conta}<div class="nota-partes">${integridade}${desempenho}</div>`, "", "bloco-pontuacao");
+}
+
+// Posição de 0 a 100 em relação aos colegas, com um traço no deputado típico (50). Barra neutra: 40 não é "ruim",
+// só abaixo da média.
+function linhaPosicao(rotulo, valor) {
+  return `<div class="maj-afin"><span>${rotulo}</span><span class="afin-mini posicao">
+    <span class="trilho"><span class="cheio" style="width:${Math.max(valor, 2)}%"></span><span class="marca-meio" title="Deputado típico"></span></span><b>${valor}</b></span></div>`;
 }
 
 function htmlBlocoChance(c) {
@@ -414,7 +413,13 @@ async function carregarGrupo() {
   const pedido = fichaPedido;
   ficha.g = { carregando: true };
   try {
-    ficha.g = await api(`/api/grupo?uf=${ufConsulta(ficha.cargo)}&cargo=${ficha.cargo}&grupo=${encodeURIComponent(ficha.a.chance.grupo)}`);
+    const uf = ufConsulta(ficha.cargo);
+    // As notas de quem entraria (para o anel das fotos) vêm do mesmo cálculo da tela de deputados.
+    const [g, ind] = await Promise.all([
+      api(`/api/grupo?uf=${uf}&cargo=${ficha.cargo}&grupo=${encodeURIComponent(ficha.a.chance.grupo)}`),
+      api(`/api/indicadores?uf=${uf}&cargo=${ficha.cargo}`).catch(() => null),
+    ]);
+    ficha.g = { ...g, notas: ind?.pronto ? ind.grupos?.[g.grupo]?.pessoas || {} : {} };
   } catch (e) {
     ficha.g = { erro: e.message };
   }
@@ -429,13 +434,25 @@ function faixaDoCandidato(g, pos) {
   return "longe";
 }
 
-function miniMembro(m, destaque) {
-  return `<button type="button" class="membro${destaque ? " eu" : ""}" data-abrir="${m.id}" title="Abrir a ficha">
-    ${fotoHtml(ufConsulta(ficha.cargo), m.id, m.nomeUrna, "foto membro-foto")}
-    <span class="membro-nome">${esc(nomeProprio(m.nomeUrna))}</span>
-    <span class="membro-meta">${m.posicao}º lugar, ${esc(m.partido)}</span>
-    <span class="membro-tags">${m.deputado ? `<span class="badge info">já é deputado(a)</span>` : ""}<span class="chance ${classeChance(m.chance)}">${esc(m.chance)}</span></span>
+// Foto pequena com o anel da nota geral e a chance escrita embaixo, como nos cartões da tela de deputados.
+function miniMembro(m, destaque, notas) {
+  const nota = notas?.[String(m.id)]?.nota;
+  const anel = nota != null ? ` anel-${nivelNota(nota)}` : "";
+  return `<button type="button" class="rosto membro-mini${destaque ? " meu" : ""}${anel}" data-abrir="${m.id}"
+      title="${esc(nomeProprio(m.nomeUrna))}, ${m.posicao}º na lista, ${esc(m.partido)}${nota != null ? `, nota geral ${nota}` : ""}${m.deputado ? ", já é deputado(a)" : ""}. Clique para abrir a ficha.">
+    ${fotoHtml(ufConsulta(ficha.cargo), m.id, m.nomeUrna, "foto rosto-foto")}
+    <span class="rosto-nome">${esc(nomeProprio(m.nomeUrna))}</span>
+    <span class="chance ${classeChance(m.chance)}">${esc(m.chance)}</span>
   </button>`;
+}
+
+function legendaMembros() {
+  const chances = [["Alta", "alta"], ["Disputada", "disputada"], ["Baixa", "baixa"], ["Muito baixa", "muito-baixa"]]
+    .map(([rot, cl]) => `<li><span class="chance ${cl}">${rot}</span> Em 2022, ${CHANCE_EM_2022[rot]} pessoas nesta faixa se elegeram.</li>`).join("");
+  return `<div class="legenda-membros">
+      <p><strong>Chance de entrar</strong>, pela posição na lista:</p><ul>${chances}</ul>
+      <p><strong>Cor em volta da foto</strong>, pela nota geral: <span class="leg-anel ok"></span> verde de 85 para cima, <span class="leg-anel conferir"></span> amarelo de 60 a 84, <span class="leg-anel serio"></span> vermelho abaixo de 60.</p>
+    </div>`;
 }
 
 function listaNatural(itens) {
@@ -456,19 +473,28 @@ function painelGrupo() {
   const nome = esc(nomeProprio(f.nomeUrna));
   const lista = esc(agremiacao(g.grupo));
   const dentro = eu?.posicao && eu.posicao <= g.vagas;
-  const intro = `<p class="painel-intro">Para deputado, o voto conta primeiro para a lista, que aqui é a ${lista}, e só depois para a pessoa. Por isso, votar em ${nome} também ajuda a eleger os mais bem colocados dessa lista.</p>`;
+  const intro = `<section class="fsecao voto-explica">
+      <h3>Como o seu voto funciona para deputado</h3>
+      <ol class="como-funciona">
+        <li><span class="passo">1</span><div><strong>O voto vai primeiro para a lista</strong><span>Mesmo votando em ${nome}, o voto conta antes para a lista em que a candidatura está: ${lista}.</span></div></li>
+        <li><span class="passo">2</span><div><strong>A lista ganha vagas</strong><span>Quanto mais votos a lista soma, mais cadeiras ela ganha. ${g.vagas ? `Pela estimativa, essa lista teria ${g.vagas} ${g.vagas === 1 ? "vaga" : "vagas"}.` : `Pela estimativa, essa lista não teria nenhuma vaga.`}</span></div></li>
+        <li><span class="passo">3</span><div><strong>Entram os mais votados da lista</strong><span>As vagas ficam com as pessoas mais votadas dentro da lista, de qualquer partido dela.</span></div></li>
+      </ol>
+      <p class="voto-explica-fim">Por isso, votar em ${nome} também ajuda a eleger quem está mais bem colocado na mesma lista, mesmo que você não conheça essas pessoas.</p>
+      ${htmlAvisoEstimativa()}
+    </section>`;
 
   if (!g.vagas) {
     return intro + secao("Quem a lista elegeria", `<p>Pela estimativa, a lista ${lista} não chegaria ao número mínimo de votos para eleger alguém.</p>`,
       leitura("atencao", "Se isso se repetir em 2026, os votos nesta lista não elegem ninguém. Mais abaixo você vê quantos votos faltariam.")) + htmlOndePesa(g, eu, nome);
   }
 
-  const membros = g.membros.map((m) => miniMembro(m, m.id === f.id)).join("");
+  const membros = g.membros.map((m) => miniMembro(m, m.id === f.id, g.notas)).join("");
   const grupoTexto = dentro
     ? `${nome} está entre os ${g.vagas} que a lista elegeria, e o seu voto reforça esse grupo.`
     : `${nome} está ${eu?.posicao ? `em ${eu.posicao}º lugar` : "fora da estimativa"}, abaixo das ${g.vagas} vagas. Na prática, o voto em ${nome} ajuda principalmente a eleger ${g.vagas === 1 ? "esta pessoa" : `estas ${g.vagas} pessoas`}.`;
   const blocoGrupo = secao("Quem você ajuda a eleger",
-    `<div class="membros">${membros}</div><p class="nota-pequena">Clique em uma pessoa para abrir a ficha dela.</p>`,
+    `<div class="rostos membros-rostos">${membros}</div>${legendaMembros()}<p class="nota-pequena">Clique em uma pessoa para abrir a ficha dela.</p>`,
     leitura("neutro", grupoTexto, "Numa federação, as vagas podem ir para qualquer partido que faz parte dela, não só para o partido de quem você escolheu."));
 
   const r = g.retrato;
@@ -519,7 +545,8 @@ function htmlPerfilPartido(p) {
     tiles.push(`<div class="tile"><div class="rot">Na Câmara</div><div class="val">${f.membros} ${f.membros === 1 ? "deputado" : "deputados"}</div>
       <div class="det">${f.governismo != null ? `Votaram com o governo em ${pct.format(f.governismo)} das vezes.` : ""}</div></div>`);
     if (f.partePix != null) tiles.push(`<div class="tile"><div class="rot">Emendas Pix</div><div class="val">${pct.format(f.partePix)}</div>
-      <div class="det">Do valor das emendas da bancada. Na Câmara toda, ${pct.format(rf.partePix || 0)}.</div></div>`);
+      <div class="det">Do valor das emendas da bancada. Na Câmara toda, ${pct.format(rf.partePix || 0)}.</div>
+      <details class="tile-mais"><summary>O que é emenda Pix?</summary><p>É a transferência especial: o deputado manda dinheiro do Orçamento direto para o caixa de uma prefeitura ou de um estado, sem convênio e sem dizer antes em que obra ou serviço ele vai ser usado. É rápida para quem recebe, mas fica bem mais difícil acompanhar o que foi feito com o dinheiro. Desde 2024 o STF exige mais transparência nesse tipo de emenda. Aqui, uma parte menor em Pix quer dizer mais dinheiro enviado por caminhos que dá para rastrear.</p></details></div>`);
   }
   if (e) {
     tiles.push(`<div class="tile"><div class="rot">Na ALESP</div><div class="val">${e.membros} ${e.membros === 1 ? "deputado" : "deputados"}</div>
@@ -528,6 +555,7 @@ function htmlPerfilPartido(p) {
   const frases = [];
   if (f) {
     frases.push(`Na Câmara, a bancada tem desempenho médio de ${f.desempenho ?? "—"}${rf.desempenho != null ? `, ${f.desempenho > rf.desempenho + 3 ? "acima" : f.desempenho < rf.desempenho - 3 ? "abaixo" : "perto"} da média de ${rf.desempenho}` : ""}.`);
+    if (f.partePix != null && rf.partePix != null) frases.push(`${pct.format(f.partePix)} do valor das emendas da bancada foi como emenda Pix, que manda o dinheiro direto para prefeituras e estados sem dizer antes onde será usado; na Câmara toda, ${pct.format(rf.partePix)}.`);
     if (f.parteSimbolica != null) frases.push(`${pct.format(f.parteSimbolica)} dos projetos dela são simbólicos, ${comparaTexto(f.parteSimbolica, rf.parteSimbolica)} da Câmara, que é ${pct.format(rf.parteSimbolica || 0)}.`);
     if (f.comEntidadeDependente) frases.push(`${f.comEntidadeDependente === 1 ? "Um deputado da bancada tem" : `${f.comEntidadeDependente} deputados da bancada têm`} alguma entidade privada que depende das suas emendas.`);
     if (f.coesao != null) frases.push(`Os deputados acompanham a maioria da bancada em ${pct.format(f.coesao)} das votações.`);

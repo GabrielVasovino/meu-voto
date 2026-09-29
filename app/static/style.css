@@ -1210,6 +1210,22 @@ dialog.empresa-dlg[open] { display: flex; flex-direction: column; }
 .quiz-sec .quiz-efeitos { margin-top: 0; }
 .quiz-efeito .quiz-lado-tit { margin-bottom: 8px; }
 .quiz-cartao .quiz-nota { margin-top: 18px; }
+/* Quem ganha e quem perde logo abaixo da pergunta; o resto recolhido em "Preciso de mais contexto". */
+.quiz-sec-efeitos { margin-top: 18px; }
+details.quiz-mais { margin-top: 16px; }
+details.quiz-mais > summary {
+  cursor: pointer; display: inline-flex; align-items: center; gap: 6px; list-style: none;
+  font-weight: 600; font-size: .9rem; color: var(--accent-ink); padding: 8px 14px;
+  border: 1px solid var(--border); border-radius: 999px; background: var(--surface);
+}
+details.quiz-mais > summary::-webkit-details-marker { display: none; }
+details.quiz-mais > summary::before { content: "+"; font-weight: 700; }
+details.quiz-mais[open] > summary::before { content: "−"; }
+details.quiz-mais[open] > summary { background: var(--accent-soft); border-color: var(--accent-soft); }
+.quiz-mais .quiz-sec p { font-size: .92rem; line-height: 1.55; color: var(--text-2); margin: 0 0 6px; }
+.quiz-mais .ementa { font-size: .84rem !important; font-style: italic; color: var(--text-3) !important; }
+.quiz-mais .situacao { font-size: .86rem !important; }
+.quiz-mais .links { margin-top: 8px; }
 @media (max-width: 560px) { .quiz-lados { grid-template-columns: minmax(0, 1fr); } }
 
 /* Senado, Governo e Presidência: cartões por candidato */
@@ -1448,14 +1464,28 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
   background: transparent; border: 1px solid var(--border); border-radius: 999px; padding: 6px 14px;
 }
 .sobre-abas button[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-.sobre-texto { max-width: 70ch; }
-.sobre-texto h3 { font-size: 1.08rem; margin: 22px 0 6px; }
-.sobre-texto h3:first-child { margin-top: 4px; }
-.sobre-texto p, .sobre-texto li { color: var(--text-2); line-height: 1.6; font-size: .95rem; }
-.sobre-texto p { margin: 0 0 10px; }
-.sobre-texto ul, .sobre-texto ol { padding-left: 20px; margin: 0 0 10px; }
-.sobre-texto li { margin: 4px 0; }
+/* Texto ocupa a largura toda da caixa; cada tema separado por uma linha, com espaço regular. */
+.sobre-texto { width: 100%; }
+.sobre-texto h3 {
+  font-size: 1.1rem; margin: 26px 0 10px; padding-top: 20px; border-top: 1px solid var(--border);
+  color: var(--text); letter-spacing: -.005em;
+}
+.sobre-texto h3:first-child { margin-top: 0; padding-top: 0; border-top: 0; }
+.sobre-texto p, .sobre-texto li { color: var(--text-2); line-height: 1.65; font-size: .95rem; text-wrap: pretty; }
+.sobre-texto p { margin: 0 0 12px; }
+.sobre-texto ul, .sobre-texto ol { margin: 4px 0 14px; padding: 0; list-style: none; display: grid; gap: 8px; }
+.sobre-texto li {
+  margin: 0; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+}
+.sobre-texto ol { counter-reset: sobre; }
+.sobre-texto ol > li { position: relative; padding-left: 44px; }
+.sobre-texto ol > li::before {
+  counter-increment: sobre; content: counter(sobre); position: absolute; left: 12px; top: 10px;
+  width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: #fff; font-size: .75rem; font-weight: 700;
+}
 .sobre-texto strong { color: var(--text); }
+.sobre-texto a { color: var(--accent-ink); }
 .sobre-formula {
   background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 8px 0 12px;
   font-size: .92rem; color: var(--text); line-height: 1.55;
@@ -1512,6 +1542,53 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
   .res-cand .linha-barra, .res-cand-sem { grid-column: 3; text-align: left; }
   .afinidade .linha { grid-template-columns: minmax(0, 1fr); gap: 4px; }
 }
+
+/* Notas: várias linhas no mesmo formato (rótulo à esquerda, barra e número à direita). */
+.notas-lista { display: grid; gap: 8px; margin-bottom: 10px; }
+.notas-lista .maj-afin { font-size: .9rem; }
+.notas-lista .afin-mini { min-width: 160px; }
+.afin-mini.posicao .trilho { position: relative; overflow: visible; }
+.afin-mini.posicao .cheio { border-radius: 4px; }
+.afin-mini.posicao .marca-meio { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: var(--text-3); }
+.nota-conta { font-size: .88rem; color: var(--text-2); line-height: 1.5; margin: 4px 0 14px; }
+.nota-partes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.nota-parte { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.nota-parte h4 { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: .95rem; margin: 0 0 4px; }
+.nota-parte h4 b { font-variant-numeric: tabular-nums; }
+.nota-parte h4 small { font-weight: 500; color: var(--text-3); font-size: .75rem; }
+.nota-parte .explica { font-size: .84rem; color: var(--text-2); margin: 0 0 10px; }
+.nota-parte .descontos { margin: 0; }
+.nota-ok-texto { font-size: .86rem; color: var(--ok); margin: 0; }
+@media (max-width: 640px) { .nota-partes { grid-template-columns: minmax(0, 1fr); } }
+
+/* Ficha, "Seu voto elege": explicação em 3 passos e fotos pequenas de quem a lista elegeria. */
+.voto-explica .como-funciona { margin-bottom: 10px; }
+.voto-explica-fim { font-size: .92rem; color: var(--text); line-height: 1.5; margin: 0 0 12px; }
+.membros-rostos { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 12px 8px; }
+.membro-mini { gap: 4px; }
+.membro-mini .chance { font-size: .68rem; padding: 1px 7px; }
+.legenda-membros { margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: var(--surface-2); font-size: .82rem; color: var(--text-2); }
+.legenda-membros p { margin: 0 0 6px; }
+.legenda-membros p:last-child { margin: 8px 0 0; }
+.legenda-membros ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.legenda-membros .chance { min-width: 76px; text-align: center; margin-right: 4px; }
+.leg-anel { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 3px solid; vertical-align: -1px; margin-left: 4px; }
+.leg-anel.ok { border-color: var(--ok); }
+.leg-anel.conferir { border-color: var(--warn); }
+.leg-anel.serio { border-color: var(--bad); }
+
+/* Explicação recolhida dentro de um quadradinho de número (ex.: "O que é emenda Pix?"). */
+.tile-mais { margin-top: 8px; font-size: .8rem; }
+.tile-mais summary { cursor: pointer; color: var(--accent-ink); font-weight: 600; }
+.tile-mais p { margin: 6px 0 0; color: var(--text-2); line-height: 1.5; }
+
+/* Depois da 3ª resposta do questionário: já dá para ver o resultado. */
+.quiz-ja {
+  margin-top: 16px; padding: 14px 16px; border-radius: 14px; background: var(--ok-soft);
+  border: 1px solid var(--ok); display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between;
+}
+.quiz-ja p { margin: 0; flex: 1 1 260px; font-size: .95rem; line-height: 1.45; color: var(--text); }
+.quiz-ja-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Aviso de que vagas, ordem e chances são estimativas. */
 .aviso-estimativa {

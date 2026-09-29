@@ -2,14 +2,14 @@
 
 // Jornada guiada: em vez de abas soltas, o app segue a ordem da urna, um cargo por vez, com
 // uma explicação curta em cada passo. O guia de boas-vindas abre no primeiro acesso e pelo
-// botão "Guia" do topo. A afinidade do quiz acompanha a pessoa pelos passos seguintes.
+// botão "Guia" do topo. A afinidade do questionário acompanha a pessoa pelos passos seguintes.
 
 const jornada = { passo: null };
 
 function passosJornada() {
   const distrital = estado.uf === "DF";
   return [
-    { id: "afinidade", curto: "Afinidade", titulo: "Quiz de afinidade", conteudo: "quiz" },
+    { id: "afinidade", curto: "Afinidade", titulo: "Questionário de afinidade", conteudo: "quiz" },
     { id: "dep_federal", curto: "Dep. federal", titulo: "Deputado(a) federal", cargo: 6, slots: ["dep_federal"], conteudo: "ajuda" },
     {
       id: "dep_estadual", curto: distrital ? "Dep. distrital" : "Dep. estadual",
@@ -35,7 +35,7 @@ function introPasso(p) {
   const textos = {
     afinidade: {
       kicker: "Opcional, para quem ainda tem dúvida",
-      texto: `<p>São votações reais da Câmara dos Deputados, de 2023 a 2026, uma por vez. Diga se concorda ou discorda; como cada partido votou só aparece depois da sua resposta. No fim, você vê quais federações e partidos votaram mais parecido com você.</p>`,
+      texto: `<p>São até 15 votações reais da Câmara dos Deputados, de 2023 a 2026, uma por vez. Em cada uma, diga só se concorda ou discorda; como cada partido votou aparece depois da sua resposta. Com 3 respostas você já pode ver com quem se parece mais, e quanto mais responder, mais preciso fica.</p>`,
     },
     dep_federal: {
       kicker: "1º voto na urna, com 4 dígitos",
@@ -144,7 +144,7 @@ function posicionarSlots(p) {
 }
 
 function desenharNavPasso(p) {
-  // O quiz tem navegação própria (votação anterior, próxima e o botão de seguir no resultado).
+  // O questionário tem navegação própria (votação anterior, próxima e o botão de seguir no resultado).
   if (p.id === "afinidade") { $("#passo-nav").innerHTML = ""; return; }
   const lista = passosJornada();
   const i = lista.findIndex((x) => x.id === p.id);
@@ -164,20 +164,20 @@ function aoMontarCedula() {
   irParaPasso(jornada.passo || salvo || "cedula", false);
 }
 
-// ---------- afinidade do quiz aplicada às listas e aos candidatos ----------
+// ---------- afinidade do questionário aplicada às listas e aos candidatos ----------
 
 // A Câmara escreve as siglas sem acento (UNIAO); o TSE, com acento e às vezes com espaço (PC do B).
 function normSigla(s) {
   return String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().replace(/\s+/g, "");
 }
 
-// true quando a pessoa respondeu o quiz e as votações já estão carregadas.
+// true quando a pessoa respondeu o questionário e as votações já estão carregadas.
 async function afinidadePronta() {
   if (respostasQuiz() < 3) return false;
   try { return !!(await carregarQuizDados()); } catch { return false; }
 }
 
-// Como a maioria destes partidos, somados como um bloco, votou numa votação do quiz:
+// Como a maioria destes partidos, somados como um bloco, votou numa votação do questionário:
 // "Sim", "Não" ou null quando não há bancada suficiente ou deu empate.
 // Uma federação funciona como um só partido na eleição, então as bancadas são somadas.
 function votoDoBloco(q, siglas) {
@@ -191,7 +191,7 @@ function votoDoBloco(q, siglas) {
   return sim > nao ? "Sim" : "Não";
 }
 
-// Em quantas votações do quiz respondidas o bloco votou como você.
+// Em quantas votações do questionário respondidas o bloco votou como você.
 function afinidadePartidos(siglas) {
   if (!quizDados || quizDados.uf !== estado.uf) return null;
   const x = { a: 0, n: 0 };
@@ -225,16 +225,16 @@ function afinidadePessoa(idTse) {
 
 function textoAfinidadePessoa(idTse) {
   const x = afinidadePessoa(idTse);
-  return x ? `${pctAfinidade(x)}% de afinidade com o seu quiz: votou como você em ${x.a} de ${x.n} votações` : "";
+  return x ? `${pctAfinidade(x)}% de afinidade com o seu questionário: votou como você em ${x.a} de ${x.n} votações` : "";
 }
 
-// Mesmo ajuste da tela do quiz para quem tem poucas votações em comum (regra de Laplace).
+// Mesmo ajuste da tela do questionário para quem tem poucas votações em comum (regra de Laplace).
 function notaAfinidade(x) { return x ? (x.a + 1) / (x.n + 2) : -1; }
 function pctAfinidade(x) { return Math.round((x.a / x.n) * 100); }
 
 function celulaAfinidade(x) {
   if (!x) return `<small class="sem-afinidade">Sem bancada na Câmara para comparar</small>`;
-  return `<span class="afin-mini" title="A bancada votou como você em ${x.a} de ${x.n} votações do quiz">
+  return `<span class="afin-mini" title="A bancada votou como você em ${x.a} de ${x.n} votações do questionário">
     <span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%<small> (${x.a} de ${x.n})</small></b></span>`;
 }
 
@@ -294,7 +294,7 @@ async function desenharGuia() {
       <p>Em poucos minutos você monta a sua cédula para 4 de outubro e entende o que cada voto faz. O caminho é este:</p>
       <ol class="guia-roteiro">
         <li>Você diz em que estado vota.</li>
-        <li>Se ainda tiver dúvida, responde um quiz com votações reais da Câmara e descobre com quais federações e partidos tem mais afinidade.</li>
+        <li>Se ainda tiver dúvida, responde um questionário com votações reais da Câmara e descobre com quais federações e partidos tem mais afinidade.</li>
         <li>Passa pelos cargos na mesma ordem da urna, com uma explicação curta em cada um e a ficha de cada candidato, montada com dados públicos.</li>
         <li>No fim, imprime a cola para levar no dia da eleição.</li>
       </ol>
@@ -322,12 +322,12 @@ async function desenharGuia() {
         </button>
         <button type="button" class="guia-escolha principal" data-guia-ir="afinidade">
           <strong>Ainda tenho dúvidas</strong>
-          <span>Responda o quiz de afinidade e depois siga os cargos na ordem da urna, vendo quais listas e candidatos votaram mais parecido com você.</span>
+          <span>Responda o questionário de afinidade e veja com quais partidos e candidatos você mais se identifica. São até 15 votações reais da Câmara, e em cada uma você só diz se concorda ou discorda. Com 3 respostas, cerca de 1 minuto, você já vê o resultado; responder todas leva uns 5 minutos.</span>
         </button>
       </div>
       <div class="guia-acoes">
         <button type="button" class="btn" data-guia="voltar">← Voltar</button>
-        <button type="button" class="link-btn" data-guia-ir="dep_federal">Prefiro ver os cargos um por um, sem o quiz</button>
+        <button type="button" class="link-btn" data-guia-ir="dep_federal">Prefiro ver os cargos um por um, sem o questionário</button>
       </div>`;
   }
   corpo.innerHTML = topoGuia() + html;

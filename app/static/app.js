@@ -130,7 +130,7 @@ function htmlEsperaListas(p) {
 
 // Assim que o estado é conhecido (no guia de boas-vindas ou ao reabrir o site), pede em segundo plano o que as
 // próximas telas vão usar. Na primeira vez o servidor começa a montar os dados deste estado enquanto a pessoa
-// ainda lê o guia ou responde o quiz; nas outras, as respostas já ficam prontas no navegador e no servidor.
+// ainda lê o guia ou responde o questionário; nas outras, as respostas já ficam prontas no navegador e no servidor.
 const aquecidos = new Set();
 function aquecerEstado(uf) {
   if (!uf || aquecidos.has(uf)) return;
@@ -189,7 +189,7 @@ function atualizarContagem() {
 
 // ---------- salvar ----------
 
-// No modo público (servidor com --publico) a cédula e o quiz ficam só neste navegador.
+// No modo público (servidor com --publico) a cédula e o questionário ficam só neste navegador.
 const modoApp = { publico: false };
 const CHAVE_LOCAL = "meuvoto:cedula";
 
@@ -625,7 +625,7 @@ async function carregarMajoritario(item, reordenado = false) {
         </div>
         <span class="maj-num" title="Número na urna">${esc(c.numero)}</span>
       </header>
-      ${comAfinidade ? `<div class="maj-afin"><span>Afinidade do partido com o seu quiz</span>${celulaAfinidade(af)}</div>` : ""}
+      ${comAfinidade ? `<div class="maj-afin"><span>Afinidade do partido com o seu questionário</span>${celulaAfinidade(af)}</div>` : ""}
       <div class="maj-afin maj-integ" data-integ="${c.id}"><span>Nota geral</span><small class="maj-carregando">calculando…</small></div>
       <dl class="maj-resumo" data-resumo="${c.id}"><div class="maj-carregando">Carregando o resumo…</div></dl>
       <p class="maj-sinais" data-sinais="${c.id}"></p>
@@ -655,8 +655,8 @@ async function carregarMajoritario(item, reordenado = false) {
       </label>
       ${validos.length < total ? `<span class="maj-filtro-aviso">Partidos sem bancada na Câmara não têm afinidade calculada e ficam de fora deste filtro.</span>` : ""}` : ""}
     </div>
-    ${comAfinidade ? "" : `<div class="callout convite-quiz maj-convite"><div><p>Faça o quiz de afinidade para ordenar e filtrar os candidatos pelo quanto o partido de cada um votou como você.</p></div>
-      <button type="button" class="btn pequeno primario" data-ir-passo="afinidade">Fazer o quiz</button></div>`}
+    ${comAfinidade ? "" : `<div class="callout convite-quiz maj-convite"><div><p>Faça o questionário de afinidade para ordenar e filtrar os candidatos pelo quanto o partido de cada um votou como você.</p></div>
+      <button type="button" class="btn pequeno primario" data-ir-passo="afinidade">Fazer o questionário</button></div>`}
     <p class="explica maj-intro">${validos.length === total ? `${total} candidatos` : `${validos.length} dos ${total} candidatos`}. A chance de cada um está nas <a href="https://pesqele-divulgacao.tse.jus.br/" target="_blank" rel="noopener">pesquisas registradas no TSE</a>.</p>
     <div class="maj-grade">${validos.map(cartao).join("")}</div>
     ${comProblema.length ? `<details class="metodo maj-problema">
@@ -829,7 +829,7 @@ async function montarPortal() {
   </div>`;
 }
 
-// O quiz de afinidade fica em quiz.js.
+// O questionário de afinidade fica em quiz.js.
 
 // ---------- cola para imprimir ----------
 

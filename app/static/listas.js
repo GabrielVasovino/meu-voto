@@ -57,10 +57,10 @@ function rosto(c, meuId) {
   </button>`;
 }
 
-// Afinidade da lista com o quiz, na mesma linha usada nos cartões de Senado, Governo e Presidência.
+// Afinidade da lista com o questionário, na mesma linha usada nos cartões de Senado, Governo e Presidência.
 function linhaAfinidadeLista(g) {
   if (respostasQuiz() < 3 || !quizDados) return "";
-  return `<div class="maj-afin"><span>Afinidade da lista com o seu quiz</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
+  return `<div class="maj-afin"><span>Afinidade da lista com o seu questionário</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
 }
 
 function htmlListaCartao(g, item) {
@@ -115,7 +115,7 @@ async function carregarProporcional(item) {
   if (!corpo.querySelector(".espera")) corpo.innerHTML = `<p class="carregando">Montando as listas com os votos de 2022…</p>`;
   let p;
   try {
-    // A afinidade do quiz (se respondido) é carregada junto, para os cartões já nascerem com ela.
+    // A afinidade do questionário (se respondido) é carregada junto, para os cartões já nascerem com ela.
     [p] = await Promise.all([api(`/api/listas?uf=${estado.uf}&cargo=${item.cargo}`), afinidadePronta()]);
   } catch (e) {
     corpo.innerHTML = `<p class="carregando aviso">${esc(e.message)}</p>`;
@@ -171,11 +171,11 @@ function desenharListas() {
       ${balao("Como ler os números", `<ul>
         <li><strong>Vagas</strong> é quantas cadeiras a lista teria se os votos de 2022 se repetissem.</li>
         <li><strong>Nota geral</strong>, de 0 a 100, é a média de quem ocuparia essas vagas. Ela junta duas partes, que aparecem separadas ao abrir a lista: a <strong>integridade</strong>, que parte de 100 e perde 20 pontos por indício que vale conferir e 50 por alerta sério, e o <strong>desempenho</strong>, que só existe para quem já tem mandato e compara presença, projetos aprovados, relatorias, projetos simbólicos e gastos com os colegas. A posição política não entra, porque isso depende da sua opinião.</li>
-        <li>O anel em volta da foto mostra a nota geral da pessoa: verde de 85 para cima, amarelo de 60 a 84 e vermelho abaixo de 60. A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu quiz: a porcentagem das votações do quiz em que ele votou como você.</li>
+        <li>O anel em volta da foto mostra a nota geral da pessoa: verde de 85 para cima, amarelo de 60 a 84 e vermelho abaixo de 60. A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu questionário: a porcentagem das votações do questionário em que ele votou como você.</li>
       </ul>
       <p><button type="button" class="link-btn" data-abrir-sobre="metodologia">Ver a metodologia completa</button></p>`)}
       ${balao("Como a estimativa é feita", metodo)}
-      ${comQuiz ? "" : `<button type="button" class="link-btn listas-quiz" data-ir-passo="afinidade">Faça o quiz para ordenar por afinidade</button>`}
+      ${comQuiz ? "" : `<button type="button" class="link-btn listas-quiz" data-ir-passo="afinidade">Faça o questionário para ordenar por afinidade</button>`}
     </div>
     <div id="listas-visao"></div>
     ${semVaga.length ? `<details class="mais listas-sem-vaga"><summary>Listas que não elegeriam ninguém pela estimativa (${semVaga.length})</summary>
@@ -273,7 +273,7 @@ function notaDoGrupo(id) {
 function ordenarPorNota(itens, nota, desempate = () => null, afinidade = null) {
   if (visaoListas.ordem === "padrao") return itens;
   if (visaoListas.ordem === "afinidade") {
-    // Sem quiz respondido, a opção some; se estava guardada, volta à ordem padrão.
+    // Sem questionário respondido, a opção some; se estava guardada, volta à ordem padrão.
     if (!afinidade || respostasQuiz() < 3 || !quizDados) return itens;
     return [...itens].sort((a, b) => notaAfinidade(afinidade(b)) - notaAfinidade(afinidade(a)));
   }
