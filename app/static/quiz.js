@@ -133,14 +133,16 @@ function itemEfeito(texto) {
 function htmlGuiaPergunta(q) {
   const secao = (n, titulo, corpo) => corpo
     ? `<section class="quiz-sec"><h4><span class="quiz-sec-n" aria-hidden="true">${n}</span>${titulo}</h4>${corpo}</section>` : "";
+  // Partidos e governo ficam de fora até a resposta, para não influenciar: aqui só os argumentos e, quando há,
+  // quem apoiava de fora do Congresso (sindicatos, organizações). Como cada bancada votou aparece depois.
   const ladoHtml = (classe, titulo, l) => l ? `<div class="quiz-lado ${classe}">
       <p class="quiz-lado-tit">${titulo}</p>
-      <p class="quiz-lado-quem">${esc(l.quem)}</p>
+      ${l.quem ? `<p class="quiz-lado-quem">Fora do Congresso: ${esc(l.quem)}</p>` : ""}
       <ul>${l.argumentos.map((a) => `<li>${esc(a)}</li>`).join("")}</ul>
     </div>` : "";
   // ladoSim/ladoNao: sim e nao já são o placar da votação.
   const lados = q.ladoSim || q.ladoNao
-    ? `<div class="quiz-lados">${ladoHtml("sim", "Quem defendia o Sim <small>(concordar)</small>", q.ladoSim)}${ladoHtml("nao", "Quem defendia o Não <small>(discordar)</small>", q.ladoNao)}</div>` : "";
+    ? `<div class="quiz-lados">${ladoHtml("sim", "Quem concordava <small>(votou Sim)</small>", q.ladoSim)}${ladoHtml("nao", "Quem discordava <small>(votou Não)</small>", q.ladoNao)}</div>` : "";
   const efeitos = q.ganha?.length || q.perde?.length ? `<div class="quiz-efeitos">
       <div class="quiz-efeito ganha"><p class="quiz-lado-tit">Quem tende a ganhar</p><ul>${(q.ganha || []).map(itemEfeito).join("")}</ul></div>
       <div class="quiz-efeito perde"><p class="quiz-lado-tit">Quem tende a perder</p><ul>${(q.perde || []).map(itemEfeito).join("")}</ul></div>
@@ -149,7 +151,7 @@ function htmlGuiaPergunta(q) {
     ? `<p>${esc(q.pratica)}</p>${q.incerto ? `<p class="quiz-incerto"><strong>Ainda em aberto:</strong> ${esc(q.incerto)}</p>` : ""}` : "";
   return secao(1, "Como chegou a essa votação", q.historia ? `<p>${esc(q.historia)}</p>` : "")
     + secao(2, "O que muda na prática", pratica)
-    + secao(3, "Os dois lados", lados)
+    + secao(3, "Os argumentos de cada lado", lados)
     + secao(4, "Quem tende a ganhar e a perder", efeitos);
 }
 
@@ -193,11 +195,16 @@ function htmlComoVotaram(q) {
 
 function linhaAfinidade(nome, sub, x, atributos = "") {
   const p = x.a / x.n;
-  return `<div class="linha" title="Concorda em ${x.a} de ${x.n} votações">
+  return `<div class="linha" title="${Math.round(p * 100)}% de afinidade: votou como você em ${x.a} de ${x.n} votações do quiz">
     <span class="nome">${nome}${sub ? `<small>${sub}</small>` : ""}</span>
     <span class="trilho"><span class="cheio" style="width:${Math.round(p * 100)}%"></span></span>
-    <span class="pc" ${atributos}>${Math.round(p * 100)}%<small>${x.a} de ${x.n}</small></span>
+    <span class="pc" ${atributos}>${Math.round(p * 100)}% <span class="pc-rot">de afinidade</span><small>igual a você em ${x.a} de ${x.n}</small></span>
   </div>`;
+}
+
+// O número grande dos cartões do pódio, sempre dizendo o que é.
+function htmlPctCartao(x) {
+  return `<div class="res-pc"><strong>${pctAfinidade(x)}%</strong><span>de afinidade: votou como você em ${x.a} de ${x.n} ${x.n === 1 ? "votação" : "votações"}</span></div>`;
 }
 
 // Ordena com um pequeno ajuste para quem tem poucas votações em comum (regra de Laplace).
@@ -236,13 +243,14 @@ function desenharResultado() {
     return x;
   }).filter((x) => x.n >= minimo).sort((a, b) => notaQuiz(b) - notaQuiz(a));
 
-  const listaPartidos = Object.entries(partidos).filter(([, x]) => x.n >= minimo)
-    .sort((a, b) => notaQuiz(b[1]) - notaQuiz(a[1]))
-    .map(([s, x]) => linhaAfinidade(esc(sigla(s)), "", x)).join("");
+  const rankingPartidos = Object.entries(partidos).filter(([, x]) => x.n >= minimo)
+    .sort((a, b) => notaQuiz(b[1]) - notaQuiz(a[1]));
+  const linhaPartido = ([s, x]) => linhaAfinidade(esc(sigla(s)), "", x);
   const htmlDep = (x) => linhaAfinidade(
     `<button type="button" class="link-btn" data-dep-ficha="${x.d.candidatura.id}" data-cargo="${x.d.candidatura.cargo}">${esc(x.d.nome)}</button>`,
     `${esc(sigla(x.d.partido))}, disputa ${esc(x.d.candidatura.rotulo.toLowerCase())} com o ${esc(x.d.candidatura.numero)}`, x);
   const topDeps = deps.slice(0, 3);
+  const nomeUf = esc(UFS[estado.uf] || estado.uf);
 
   const faltam = vistas < perguntas.length;
   $("#quiz-corpo").innerHTML = `<div class="quiz-res" id="quiz-palco">
@@ -250,7 +258,7 @@ function desenharResultado() {
       <div class="res-cab-texto">
         <p class="passo-kicker">Seu resultado</p>
         <h3>Quem votou mais parecido com você</h3>
-        <p>Com base nas suas ${n} respostas${faltam ? `, de ${perguntas.length} votações` : ""}. A porcentagem mostra em quantas delas a maioria da bancada votou do jeito que você respondeu.</p>
+        <p>Com base nas suas ${n} respostas${faltam ? `, de ${perguntas.length} votações` : ""}. A porcentagem é a <strong>afinidade</strong>: em quantas dessas votações a maioria da bancada votou do mesmo jeito que você respondeu. 100% quer dizer que votou igual a você em todas; 50%, em metade.</p>
       </div>
       <div class="res-cab-lado">
         ${gov.n ? `<div class="res-gov" title="Votações em que você concordou com a orientação que o governo deu à base na Câmara">
@@ -263,16 +271,36 @@ function desenharResultado() {
 
     <section class="res-secao">
       <div class="res-secao-cab">
-        <h4>Federações e partidos</h4>
-        <p class="explica">As listas que disputam deputado federal em ${esc(UFS[estado.uf] || estado.uf)}. Nas federações, os partidos votam como um bloco, então as bancadas são somadas.</p>
+        <h4>Federações e partidos, para deputado</h4>
+        <p class="explica">O voto para deputado vai primeiro para a lista, que é a federação ou o partido. As listas são as mesmas para deputado federal e estadual em ${nomeUf}. Nas federações, os partidos votam como um bloco, então as bancadas são somadas.</p>
       </div>
-      <div class="res-podio" id="res-podio"><p class="carregando">Comparando com as listas de ${esc(UFS[estado.uf] || estado.uf)}…</p></div>
+      <div class="res-podio" id="res-podio"><p class="carregando">Comparando com as listas de ${nomeUf}…</p></div>
     </section>
+
+    <section class="res-secao">
+      <div class="res-secao-cab">
+        <h4>Senado, governo e presidência</h4>
+        <p class="explica">Os candidatos a esses cargos, na maioria, não têm voto registrado na Câmara. Por isso a afinidade de cada um é a do partido dele. Toque no nome para abrir a ficha.</p>
+      </div>
+      <div class="res-cargos" id="res-cargos"><p class="carregando">Comparando com os candidatos…</p></div>
+    </section>
+
+    ${rankingPartidos.length ? `<section class="res-secao">
+      <div class="res-secao-cab">
+        <h4>Partido por partido</h4>
+        <p class="explica">Cada partido sozinho, pela maioria da própria bancada na Câmara. Partidos sem deputados federais não aparecem porque não têm votos para comparar.</p>
+      </div>
+      <div class="cartao res-partidos-lista">
+        <div class="afinidade">${rankingPartidos.slice(0, 6).map(linhaPartido).join("")}</div>
+        ${rankingPartidos.length > 6 ? `<details class="res-mais"><summary>Ver os outros ${rankingPartidos.length - 6} partidos</summary>
+          <div class="afinidade">${rankingPartidos.slice(6).map(linhaPartido).join("")}</div></details>` : ""}
+      </div>
+    </section>` : ""}
 
     ${topDeps.length ? `<section class="res-secao">
       <div class="res-secao-cab">
-        <h4>Deputados federais</h4>
-        <p class="explica">Quem já é deputado federal e disputa 2026 em ${esc(estado.uf)} tem o próprio voto registrado nessas votações. Toque no nome para abrir a ficha.</p>
+        <h4>Quem já é deputado federal</h4>
+        <p class="explica">Quem está hoje na Câmara e disputa algum cargo em 2026 em ${esc(estado.uf)} tem o próprio voto registrado nessas votações, então aqui a afinidade é da pessoa, não do partido.</p>
       </div>
       <div class="res-podio">
         ${topDeps.map((x, k) => cartaoPessoa(x, k)).join("")}
@@ -287,23 +315,67 @@ function desenharResultado() {
       <button type="button" class="btn primario" data-ir-passo="dep_federal">Seguir para Deputado(a) federal →</button>
     </div>
     <div class="res-rodape">
-      <details class="metodo res-partidos"><summary>Ver partido por partido</summary><div class="afinidade" style="margin-top:8px">${listaPartidos}</div></details>
-      <p class="nota-pequena">A comparação usa só estas ${perguntas.length} votações da Câmara. <button type="button" class="link-btn quiz-refazer" data-quiz="refazer">Apagar as respostas e refazer o quiz</button></p>
+      <p class="nota-pequena">A comparação usa só estas ${perguntas.length} votações da Câmara. <button type="button" class="link-btn" data-abrir-sobre="metodologia">Como a afinidade é calculada</button>. <button type="button" class="link-btn quiz-refazer" data-quiz="refazer">Apagar as respostas e refazer o quiz</button></p>
     </div>
   </div>`;
   preencherListasResultado();
+  preencherCargosResultado();
+}
+
+// Senado, Governo e Presidência: os 3 candidatos de cada cargo cujo partido votou mais como você.
+async function preencherCargosResultado() {
+  const cargos = [[5, "Senado"], [3, "Governo do estado"], [1, "Presidência"]];
+  let listas;
+  try {
+    listas = await Promise.all(cargos.map(([c]) => api(`/api/candidatos?uf=${ufConsulta(c)}&cargo=${c}`)));
+  } catch {
+    const alvo = $("#res-cargos");
+    if (alvo) alvo.closest(".res-secao").remove();
+    return;
+  }
+  const alvo = $("#res-cargos");
+  if (!alvo) return;
+  alvo.innerHTML = cargos.map(([cargo, rotulo], i) => {
+    const vistos = new Set();
+    const itens = listas[i].candidatos
+      .filter((c) => candidaturaValida(c) && !vistos.has(`${c.nomeUrna}|${c.numero}`) && vistos.add(`${c.nomeUrna}|${c.numero}`))
+      .map((c) => ({ c, x: afinidadePartidos([c.partido]) }))
+      .sort((a, b) => notaAfinidade(b.x) - notaAfinidade(a.x) || a.c.nomeUrna.localeCompare(b.c.nomeUrna, "pt-BR"));
+    const linha = ({ c, x }) => `<li class="res-cand">
+        ${fotoHtml(ufConsulta(cargo), c.id, c.nomeUrna, "foto res-cand-foto")}
+        <span class="res-cand-nome"><button type="button" class="link-btn" data-dep-ficha="${c.id}" data-cargo="${cargo}">${esc(nomeProprio(c.nomeUrna))}</button>
+          <small>${esc(c.partido)}, número ${esc(c.numero)}</small></span>
+        ${x ? `<span class="res-cand-pc"><b>${pctAfinidade(x)}%</b><small>de afinidade (${x.a} de ${x.n})</small></span>`
+          : `<span class="res-cand-pc sem"><small>Partido sem bancada na Câmara</small></span>`}
+      </li>`;
+    return `<article class="res-cargo cartao">
+      <h5>${rotulo}</h5>
+      <ol class="res-cands">${itens.slice(0, 3).map(linha).join("")}</ol>
+      ${itens.length > 3 ? `<details class="res-mais"><summary>Ver todos os ${itens.length}</summary>
+        <ol class="res-cands">${itens.slice(3).map(linha).join("")}</ol></details>` : ""}
+    </article>`;
+  }).join("");
 }
 
 // Pódio com as 3 listas (federação ou partido) de deputado federal do estado que mais votaram como você.
 async function preencherListasResultado() {
   if (!listasQuiz || listasQuiz.uf !== estado.uf) {
+    let p;
     try {
-      listasQuiz = { uf: estado.uf, p: await api(`/api/listas?uf=${estado.uf}&cargo=6`) };
+      p = await api(`/api/listas?uf=${estado.uf}&cargo=6`);
     } catch {
       const podio = $("#res-podio");
-      if (podio) podio.innerHTML = "";
+      if (podio) podio.innerHTML = `<p class="carregando">Não foi possível montar as listas agora. Tente de novo em alguns minutos.</p>`;
       return;
     }
+    if (p.preparando) {
+      // Servidor novo: a base de 2022 do estado ainda está sendo montada.
+      const podio = $("#res-podio");
+      if (podio) podio.innerHTML = `<p class="carregando">Preparando as listas de ${esc(UFS[estado.uf] || estado.uf)}. Na primeira vez isso leva até 2 minutos; esta parte atualiza sozinha.</p>`;
+      setTimeout(() => { if ($("#res-podio")) preencherListasResultado(); }, 6000);
+      return;
+    }
+    listasQuiz = { uf: estado.uf, p };
   }
   const podio = $("#res-podio");
   if (!podio) return;
@@ -326,7 +398,7 @@ async function preencherListasResultado() {
       <span class="res-pos">${k + 1}º lugar</span>
       <h4>${esc(agremiacao(g.id))}</h4>
       <div class="chips">${partidos}</div>
-      <div class="res-pc"><strong>${pcx}%</strong><span>${x.a} de ${x.n} votações</span></div>
+      ${htmlPctCartao(x)}
       <div class="trilho"><span class="cheio" style="width:${pcx}%"></span></div>
       <p class="res-vagas">${vagas}</p>
     </article>`;
@@ -347,7 +419,7 @@ function cartaoPessoa(x, k) {
       <h4><button type="button" class="link-btn" data-dep-ficha="${c.id}" data-cargo="${c.cargo}">${esc(nomeProprio(x.d.nome))}</button></h4>
     </div>
     <div class="chips"><span class="chip">${esc(sigla(x.d.partido))}</span><span class="chip">Nº ${esc(c.numero)}</span></div>
-    <div class="res-pc"><strong>${pcx}%</strong><span>${x.a} de ${x.n} votações</span></div>
+    ${htmlPctCartao(x)}
     <div class="trilho"><span class="cheio" style="width:${pcx}%"></span></div>
     <p class="res-vagas">Disputa ${esc(c.rotulo.toLowerCase())} em 2026</p>
   </article>`;

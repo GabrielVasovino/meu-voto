@@ -19,6 +19,8 @@
       </div>
       <div class="topo-dir">
         <div class="contagem" id="contagem" aria-live="polite"></div>
+        <button type="button" class="btn fantasma pequeno" id="abrir-fornecedores">Fornecedores</button>
+        <button type="button" class="btn fantasma pequeno" id="abrir-sobre">Sobre e metodologia</button>
         <button type="button" class="btn fantasma pequeno" id="abrir-guia">Guia</button>
         <button type="button" class="btn fantasma pequeno" id="sair">Sair</button>
       </div>
@@ -49,11 +51,6 @@
         <p class="nota">O celular não pode entrar na cabine de votação, mas a cola em papel pode.</p>
       </div>
       <div id="ajuda-portal"></div>
-      <div class="cartao">
-        <h3>Para ir além</h3>
-        <p class="explica">Veja quais empresas mais receberam das campanhas do seu estado, quantas campanhas cada uma atende e o que chama atenção nelas.</p>
-        <button type="button" class="btn" id="ver-fornecedores">Fornecedores de campanha</button>
-      </div>
     </section>
 
     <section class="painel futuro" id="futuro" hidden>
@@ -95,6 +92,14 @@
     <div id="lista-dlg-corpo" class="lista-dlg-corpo"></div>
   </dialog>
 
+  <dialog id="fornecedores-dlg" class="lista-dlg fornecedores-dlg" aria-labelledby="fornecedores-titulo">
+    <div id="fornecedores-corpo" class="lista-dlg-corpo"></div>
+  </dialog>
+
+  <dialog id="sobre" class="lista-dlg sobre-dlg" aria-labelledby="sobre-titulo">
+    <div id="sobre-corpo" class="lista-dlg-corpo"></div>
+  </dialog>
+
   <dialog id="guia" class="guia" aria-labelledby="guia-titulo">
     <div id="guia-corpo" class="guia-corpo"></div>
   </dialog>
@@ -107,5 +112,7 @@
   <script src="ficha.js"></script>
   <script src="listas.js"></script>
   <script src="empresa.js"></script>
+  <script src="fornecedores.js"></script>
+  <script src="sobre.js"></script>
 </body>
 </html>

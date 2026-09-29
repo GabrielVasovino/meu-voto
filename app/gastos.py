@@ -14,8 +14,10 @@ import math
 import re
 import sqlite3
 import statistics
+import sys
 import threading
 import time
+import traceback
 import unicodedata
 from collections import Counter, defaultdict
 from datetime import date, datetime
@@ -65,6 +67,12 @@ _rodando = threading.Event()
 _estado = {"etapa": "parado", "erro": None}
 _sobrenomes = None
 _nomes_candidatos = None
+
+
+def registrar_falha(e):
+    """Deixa no log do servidor em que etapa a base falhou, com o erro completo."""
+    print(f"[{__name__}] falhou em \"{_estado.get('etapa')}\": {e}", file=sys.stderr)
+    traceback.print_exc()
 
 
 # ---------- utilidades ----------
@@ -231,7 +239,15 @@ def _montar():
     conn.execute("INSERT INTO meta VALUES ('geradoEm', ?)", (time.strftime("%Y-%m-%d %H:%M"),))
     conn.commit()
     conn.close()
-    tmp.replace(destino)
+    # No Windows o banco não pode ser trocado enquanto alguém o lê (uma consulta em andamento): espera e tenta de novo.
+    for tentativa in range(30):
+        try:
+            tmp.replace(destino)
+            break
+        except PermissionError:
+            if tentativa == 29:
+                raise
+            time.sleep(2)
 
 
 def _preparar():
@@ -241,7 +257,8 @@ def _preparar():
         _sobrenomes = _nomes_candidatos = None
         _estado.update(etapa="pronto", erro=None)
     except Exception as e:  # noqa: BLE001 - mostramos o erro na interface
-        _estado.update(etapa="erro", erro=str(e))
+        registrar_falha(e)
+        _estado.update(etapa="erro", erro=f"{_estado.get('etapa')}: {e}")
     finally:
         _rodando.clear()
 
@@ -362,7 +379,7 @@ def _sobrenome_raro(sobrenomes, nome):
 def _rede(c, doc):
     base = c.execute(
         """SELECT count(DISTINCT sq_candidato) candidatos, count(DISTINCT partido) partidos,
-                  count(DISTINCT uf) ufs, sum(valor) total, min(data) primeira, max(nome) nome
+                  count(DISTINCT NULLIF(uf, 'BR')) ufs, sum(valor) total, min(data) primeira, max(nome) nome
            FROM despesas WHERE doc = ?""", (doc,)).fetchone()
     por_partido = c.execute(
         "SELECT partido, sum(valor) v FROM despesas WHERE doc = ? GROUP BY partido ORDER BY v DESC", (doc,)).fetchall()
@@ -771,7 +788,7 @@ def _panorama(uf, limite):
         saida = []
         for r in linhas:
             h = c.execute("SELECT candidatos FROM hist2022 WHERE doc = ?", (r["doc"],)).fetchone()
-            nacional = c.execute("SELECT count(DISTINCT sq_candidato), count(DISTINCT uf) FROM despesas WHERE doc = ?",
+            nacional = c.execute("SELECT count(DISTINCT sq_candidato), count(DISTINCT NULLIF(uf, 'BR')) FROM despesas WHERE doc = ?",
                                  (r["doc"],)).fetchone()
             principal = c.execute(
                 "SELECT partido, sum(valor) v FROM despesas WHERE doc = ? AND uf = ? GROUP BY partido ORDER BY v DESC LIMIT 1",

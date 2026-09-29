@@ -23,9 +23,6 @@ function passosJornada() {
   ];
 }
 
-// Fica fora da trilha: abre a partir de "Sua cédula".
-const PASSO_FORNECEDORES = { id: "fornecedores", titulo: "Fornecedores de campanha", cargo: "fornecedores", conteudo: "ajuda" };
-
 function nomeCasa() {
   if (estado.uf === "DF") return "Câmara Legislativa do Distrito Federal";
   if (estado.uf === "SP") return "Assembleia Legislativa de São Paulo, a ALESP";
@@ -64,16 +61,11 @@ function introPasso(p) {
       kicker: "Revisão final",
       texto: `<p>Aqui estão os seus votos na ordem da urna. Se já sabe em quem votar, é só digitar o número ou o nome em cada cargo; para conferir alguém, toque em "Ver ficha". Quando terminar, imprima a cola: o celular não pode entrar na cabine, mas o papel pode.</p>`,
     },
-    fornecedores: {
-      kicker: "Para ir além",
-      texto: `<p>As empresas que mais receberam das campanhas do seu estado em 2026. Em "Ver a empresa" aparecem o cadastro na Receita, os sócios, as campanhas que ela atende e o que chama atenção.</p>`,
-    },
   };
   return textos[p.id];
 }
 
 function passoPorId(id) {
-  if (id === PASSO_FORNECEDORES.id) return PASSO_FORNECEDORES;
   const lista = passosJornada();
   return lista.find((p) => p.id === id) || lista[lista.length - 1];
 }
@@ -102,7 +94,7 @@ function desenharTrilha() {
 // Atualiza os ✓ e o passo atual sem redesenhar (a trilha pode estar rolada no tablet).
 function marcarPassos() {
   const lista = passosJornada();
-  const atual = jornada.passo === PASSO_FORNECEDORES.id ? "cedula" : jornada.passo;
+  const atual = jornada.passo;
   document.querySelectorAll(".jornada-passo").forEach((b, i) => {
     const p = lista[i];
     if (!p) return;
@@ -156,7 +148,7 @@ function desenharNavPasso(p) {
   if (p.id === "afinidade") { $("#passo-nav").innerHTML = ""; return; }
   const lista = passosJornada();
   const i = lista.findIndex((x) => x.id === p.id);
-  const anterior = p.id === PASSO_FORNECEDORES.id ? lista[lista.length - 1] : lista[i - 1];
+  const anterior = lista[i - 1];
   const proximo = i >= 0 ? lista[i + 1] : null;
   $("#passo-nav").innerHTML = `
     ${anterior ? `<button type="button" class="btn" data-ir-passo="${anterior.id}">← ${esc(anterior.titulo)}</button>` : "<span></span>"}
@@ -233,7 +225,7 @@ function afinidadePessoa(idTse) {
 
 function textoAfinidadePessoa(idTse) {
   const x = afinidadePessoa(idTse);
-  return x ? `No seu quiz, votou como você em ${x.a} de ${x.n} (${pctAfinidade(x)}%)` : "";
+  return x ? `${pctAfinidade(x)}% de afinidade com o seu quiz: votou como você em ${x.a} de ${x.n} votações` : "";
 }
 
 // Mesmo ajuste da tela do quiz para quem tem poucas votações em comum (regra de Laplace).
@@ -243,7 +235,7 @@ function pctAfinidade(x) { return Math.round((x.a / x.n) * 100); }
 function celulaAfinidade(x) {
   if (!x) return `<small class="sem-afinidade">Sem bancada na Câmara para comparar</small>`;
   return `<span class="afin-mini" title="A bancada votou como você em ${x.a} de ${x.n} votações do quiz">
-    <span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%</b></span>`;
+    <span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%<small> (${x.a} de ${x.n})</small></b></span>`;
 }
 
 function rankingListas(grupos) {
@@ -260,7 +252,7 @@ function htmlLinhasRanking(itens, botao) {
 // ---------- guia de boas-vindas ----------
 
 const guia = { etapa: 0 };
-const ETAPAS_GUIA = 3;
+const ETAPAS_GUIA = 4;
 
 function abrirGuia(etapa = 0) {
   guia.etapa = etapa;
@@ -289,6 +281,16 @@ async function desenharGuia() {
   let html = "";
   if (etapa === 0) {
     html = `<h2 id="guia-titulo">Boas-vindas ao Voto Informado</h2>
+      <p>Em 4 de outubro você vai digitar seis votos na urna: deputado federal, deputado estadual, dois senadores, governador e presidente. Essas pessoas vão fazer as leis, aprovar o orçamento e os impostos e governar o seu estado e o país pelos próximos anos.</p>
+      <p>Só que a informação para escolher bem está espalhada. Tudo o que se sabe sobre os candidatos é público, mas fica em dezenas de sites e arquivos do TSE, da Câmara, da Receita Federal, da CGU e do TCU, difíceis de ler. Só em São Paulo são mais de 2.500 candidatos a deputado.</p>
+      <div class="guia-destaque">
+        <p><strong>O objetivo do site é juntar esses dados num lugar só e explicar em linguagem simples</strong> quem é cada candidato, de onde vem o dinheiro da campanha, como votou quem já tem mandato e o que vale conferir antes de dar o seu voto.</p>
+      </div>
+      <p>Isso importa principalmente para deputado, o voto que costuma receber menos atenção, mesmo sendo a Câmara e a Assembleia que aprovam as leis e o orçamento. Ele vai primeiro para o partido ou a federação e ajuda a eleger outras pessoas da mesma lista, então vale saber quem o seu voto pode levar junto.</p>
+      <p class="nota-pequena">O site usa os mesmos critérios para todos os candidatos, não recomenda em quem votar e não leva a posição política de ninguém para as notas. O código é aberto, e a metodologia está explicada em <button type="button" class="link-btn" data-abrir-sobre="metodologia">Sobre e metodologia</button>.</p>
+      <div class="guia-acoes"><span></span><button type="button" class="btn primario" data-guia="avancar">Como funciona →</button></div>`;
+  } else if (etapa === 1) {
+    html = `<h2 id="guia-titulo">Como funciona</h2>
       <p>Em poucos minutos você monta a sua cédula para 4 de outubro e entende o que cada voto faz. O caminho é este:</p>
       <ol class="guia-roteiro">
         <li>Você diz em que estado vota.</li>
@@ -296,9 +298,12 @@ async function desenharGuia() {
         <li>Passa pelos cargos na mesma ordem da urna, com uma explicação curta em cada um e a ficha de cada candidato, montada com dados públicos.</li>
         <li>No fim, imprime a cola para levar no dia da eleição.</li>
       </ol>
-      <p class="nota-pequena">Suas escolhas ficam guardadas só ${modoApp.publico ? "neste aparelho" : "no seu computador"}. O app mostra dados e comparações, mas não recomenda em quem votar.</p>
-      <div class="guia-acoes"><span></span><button type="button" class="btn primario" data-guia="avancar">Começar →</button></div>`;
-  } else if (etapa === 1) {
+      <p class="nota-pequena">Suas escolhas ficam guardadas só ${modoApp.publico ? "neste aparelho; nada é enviado ao servidor" : "no seu computador"}.</p>
+      <div class="guia-acoes">
+        <button type="button" class="btn" data-guia="voltar">← Voltar</button>
+        <button type="button" class="btn primario" data-guia="avancar">Começar →</button>
+      </div>`;
+  } else if (etapa === 2) {
     const opcoes = Object.entries(UFS).map(([s, n]) => `<option value="${s}"${s === estado.uf ? " selected" : ""}>${esc(n)} (${s})</option>`).join("");
     html = `<h2 id="guia-titulo">Onde você vota?</h2>
       <p>É o estado do seu título de eleitor. Ele define quem aparece para você em deputado, senador e governador.</p>
@@ -357,6 +362,5 @@ function iniciarJornada() {
   });
   $("#guia").addEventListener("close", marcarGuiaVisto);
   $("#abrir-guia").addEventListener("click", () => abrirGuia(0));
-  $("#ver-fornecedores").addEventListener("click", () => irParaPasso("fornecedores"));
   if (!estado.uf || !estado.guiaVisto) abrirGuia(0);
 }

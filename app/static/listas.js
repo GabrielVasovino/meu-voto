@@ -83,7 +83,7 @@ function htmlListaCartao(g, item) {
       </div>
       <div class="lista-numeros">
         <div class="lista-num" title="Vagas que a lista teria se os votos de 2022 se repetissem"><strong>${g.vagas}</strong><span>${g.vagas === 1 ? "vaga" : "vagas"}</span></div>
-        <div class="lista-num nota" data-nota="${esc(g.id)}" title="Nota do grupo, de 0 a 100: média de integridade e desempenho de quem ocuparia as vagas"><strong>…</strong><span>nota</span></div>
+        <div class="lista-num nota" data-nota="${esc(g.id)}" title="Nota do grupo, de 0 a 100: média de integridade e desempenho de quem ocuparia as vagas"><strong>…</strong><span>nota de 0 a 100</span></div>
       </div>
     </header>
     ${linhaAfinidadeLista(g)}
@@ -122,6 +122,12 @@ async function carregarProporcional(item) {
     return;
   }
   if (ajuda.cargo !== item.cargo) return;
+  if (p.preparando) {
+    // Servidor novo: a base de 2022 deste estado ainda está sendo montada. Pergunta de novo em alguns segundos.
+    corpo.innerHTML = `<p class="carregando">Preparando os resultados de 2022 e 2024 de ${esc(UFS[estado.uf] || estado.uf)}. Na primeira vez isso leva até 2 minutos; esta tela atualiza sozinha.</p>`;
+    setTimeout(() => { if (ajuda.cargo === item.cargo && !$("#aba-ajuda").hidden) carregarProporcional(item); }, 6000);
+    return;
+  }
   listasAtual = { p, item };
   desenharListas();
 }
@@ -138,6 +144,7 @@ function desenharListas() {
   const metodo = htmlMetodo(p).replace(/^\s*<details[^>]*>\s*<summary>[^<]*<\/summary>/, "").replace(/<\/details>\s*$/, "");
   const comQuiz = respostasQuiz() >= 3 && quizDados;
   corpo.innerHTML = `
+    ${p.semDinheiro ? `<div class="callout"><p>Os valores arrecadados pelas campanhas ainda estão sendo carregados, então por enquanto a ordem dentro de cada lista usa só as votações de 2022 e 2024. Volte em alguns minutos para ver a estimativa completa.</p></div>` : ""}
     <div class="listas-barra">
       <div class="segmentado" role="group" aria-label="Como ver as vagas">
         <button type="button" data-visao="grupo" aria-pressed="${visaoListas.modo === "grupo"}">Por lista</button>
@@ -163,8 +170,9 @@ function desenharListas() {
         <li><strong>Integridade</strong> parte de 100 para cada pessoa e perde 20 pontos por indício que vale conferir e 50 por alerta sério.</li>
         <li><strong>Desempenho</strong> vale para quem já tem mandato e compara presença, projetos aprovados, relatorias, parte simbólica dos projetos e gastos com os colegas.</li>
         <li><strong>Vagas</strong> é quantas cadeiras a lista teria. <strong>Nota</strong> é a média, de 0 a 100, de quem ocuparia essas vagas. A posição política não entra, porque isso depende da sua opinião.</li>
-        <li>O anel em volta da foto fica verde sem nada para conferir, amarelo com algo para conferir e vermelho com alerta sério ou integridade abaixo de 50 (vários pontos somados). A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu quiz.</li>
-      </ul>`)}
+        <li>O anel em volta da foto fica verde sem nada para conferir, amarelo com algo para conferir e vermelho com alerta sério ou integridade abaixo de 50 (vários pontos somados). A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu quiz: a porcentagem das votações do quiz em que ele votou como você.</li>
+      </ul>
+      <p><button type="button" class="link-btn" data-abrir-sobre="metodologia">Ver a metodologia completa</button></p>`)}
       ${balao("Como a estimativa é feita", metodo)}
       ${comQuiz ? "" : `<button type="button" class="link-btn listas-quiz" data-ir-passo="afinidade">Faça o quiz para ordenar por afinidade</button>`}
     </div>
@@ -499,7 +507,7 @@ function htmlListaCompleta(g, r, item) {
       <section class="analise-lista">
         <div class="analise-numeros">
           <div class="lista-num"><strong>${g.vagas}</strong><span>${g.vagas === 1 ? "vaga" : "vagas"}</span></div>
-          <div class="lista-num nota"><strong>${ind?.indice ?? "—"}</strong><span>nota</span></div>
+          <div class="lista-num nota"><strong>${ind?.indice ?? "—"}</strong><span>nota de 0 a 100</span></div>
           ${linhaAfinidadeLista(g)}
         </div>
         ${ind ? htmlIndicadores(ind) : `<p class="explica">As notas ainda estão sendo calculadas.</p>`}

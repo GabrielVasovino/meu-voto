@@ -22,8 +22,10 @@ import io
 import json
 import re
 import statistics
+import sys
 import threading
 import time
+import traceback
 import unicodedata
 import zipfile
 from collections import Counter, defaultdict
@@ -67,6 +69,12 @@ _rodando = threading.Event()
 _estado = {"etapa": "parado", "erro": None}
 _resumo = None
 _indice_nomes = None
+
+
+def registrar_falha(e):
+    """Deixa no log do servidor em que etapa a base falhou, com o erro completo."""
+    print(f"[{__name__}] falhou em \"{_estado.get('etapa')}\": {e}", file=sys.stderr)
+    traceback.print_exc()
 
 
 def _normalizar(texto):
@@ -409,7 +417,8 @@ def _preparar():
         _carregar()
         _estado.update(etapa="pronto", erro=None)
     except Exception as e:  # noqa: BLE001 - mostramos o erro na interface
-        _estado.update(etapa="erro", erro=str(e))
+        registrar_falha(e)
+        _estado.update(etapa="erro", erro=f"{_estado.get('etapa')}: {e}")
     finally:
         _rodando.clear()
 

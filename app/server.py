@@ -20,6 +20,7 @@ import socket
 import sys
 import threading
 import time
+import traceback
 import webbrowser
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
@@ -82,6 +83,11 @@ class ErroPedido(Exception):
     def __init__(self, status, mensagem):
         super().__init__(mensagem)
         self.status = status
+
+
+class Preparando(Exception):
+    """A base de 2022 do estado ainda está sendo montada: a tela mostra um aviso e pergunta de novo em seguida,
+    em vez de segurar a conexão por minutos (o nginx desistiria antes e mostraria erro)."""
 
 
 def _param(qs, nome, padrao=None):
@@ -263,6 +269,8 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/config":
                 return self._json(200, {"temChavePortal": analise.tem_chave_portal(), "publico": MODO["publico"],
                                         "sancoes": sancoes.status()})
+            if url.path == "/api/status":
+                return self._json(200, {"bases": _status_bases()})
             if url.path == "/api/projecao":
                 uf, cargo = self._uf_proporcional(qs)
                 return self._json(200, historico.projecao(uf, cargo))
@@ -289,6 +297,11 @@ class Handler(BaseHTTPRequestHandler):
             self._json(e.status, {"erro": str(e)})
         except tse.TSEIndisponivel:
             self._json(503, {"erro": "Não foi possível falar com o TSE agora. Verifique a internet e tente de novo."})
+        except Preparando:
+            self._json(202, {"preparando": True})
+        except Exception:  # noqa: BLE001 - sem isto a conexão cai sem resposta e o nginx mostra "502 Bad Gateway"
+            traceback.print_exc()
+            self._json(500, {"erro": "Não conseguimos montar esta parte agora. Tente de novo em alguns minutos."})
 
     def do_POST(self):
         url = urlparse(self.path)
@@ -371,6 +384,9 @@ class Handler(BaseHTTPRequestHandler):
         uf, cargo = _uf(qs), _cargo(qs)
         if uf == "BR" or cargo not in historico.cargos_proporcionais(uf):
             raise ErroPedido(400, "A projeção só vale para deputado federal e estadual/distrital")
+        if not historico.pronto(uf):
+            historico.preparar(uf)
+            raise Preparando()
         return uf, cargo
 
     def _buscar(self, qs):
@@ -472,6 +488,71 @@ def _proposicao(id_proposicao):
     }
 
 
+# Bases de dados públicos que se refazem sozinhas. Cada iniciar() só baixa de novo se a cópia estiver velha,
+# faltando ou se a última tentativa falhou, e nunca roda duas vezes ao mesmo tempo.
+BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes)
+CONFERIR_BASES_A_CADA = 3600
+
+
+# Para a página "Sobre": o que cada base traz e o arquivo que mostra quando ela foi atualizada.
+DESCRICAO_BASES = (
+    (gastos, gastos._banco, "Prestação de contas das campanhas de 2026 e 2022", "TSE"),
+    (empresas, empresas._arquivo, "Empresas em que cada candidato é sócio", "Receita Federal"),
+    (sancoes, sancoes._arquivo, "Cadastros de punidos (CEIS, CNEP e CEAF)", "CGU, Portal da Transparência"),
+    (punicoes, punicoes._arquivo, "Contas irregulares, lista suja do trabalho escravo e embargos ambientais",
+     "TCU, Ministério do Trabalho e Ibama"),
+    (camara, camara._arquivo_resumo, "Votações, presença, projetos e cota dos deputados federais", "Câmara dos Deputados"),
+    (emendas, emendas._banco, "Emendas parlamentares e quem recebeu o dinheiro", "Portal da Transparência e Transferegov"),
+    (alesp, alesp._arquivo, "Presença, projetos e verba de gabinete dos deputados estaduais de SP", "ALESP"),
+)
+
+
+def _status_bases():
+    saida = []
+    for modulo, arquivo, descricao, fonte in DESCRICAO_BASES:
+        st = modulo.status()
+        arq = arquivo()
+        saida.append({
+            "descricao": descricao, "fonte": fonte, "pronto": bool(st.get("pronto")),
+            "atualizando": st.get("etapa") not in ("pronto", "parado", "erro"),
+            "falhou": st.get("etapa") == "erro",
+            "atualizadoEm": datetime.fromtimestamp(arq.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if arq.exists() else None,
+        })
+    return saida
+
+
+def _conferir_bases():
+    for base in BASES:
+        try:
+            base.iniciar()
+        except Exception:  # noqa: BLE001 - uma base com problema não impede as outras
+            traceback.print_exc()
+
+
+def _manter_dados():
+    """Confere as bases de hora em hora. Sem isto, um servidor que fica dias no ar nunca atualizaria os dados,
+    e uma falha de download (TSE ou Receita fora do ar) só seria tentada de novo ao reiniciar."""
+    while True:
+        time.sleep(CONFERIR_BASES_A_CADA)
+        _conferir_bases()
+
+
+# Do maior para o menor eleitorado: os estados com mais visitas ficam prontos primeiro.
+ORDEM_ESTADOS = ("SP", "MG", "RJ", "BA", "PR", "RS", "PE", "CE", "PA", "SC", "GO", "MA", "AM", "ES", "PB", "RN",
+                 "MT", "AL", "PI", "DF", "MS", "SE", "RO", "TO", "AC", "AP", "RR")
+
+
+def _preparar_historico():
+    """Monta a base de 2022 e os votos de 2024 de todos os estados logo ao abrir, um de cada vez. Na primeira vez
+    cada estado leva até 2 minutos; enquanto isso, a aba de deputados daquele estado mostra que está preparando."""
+    for uf in ORDEM_ESTADOS:
+        try:
+            historico.base(uf)
+            historico.municipal(uf)
+        except Exception:  # noqa: BLE001 - tenta de novo quando alguém abrir o estado
+            traceback.print_exc()
+
+
 REDE_TAILSCALE = ipaddress.ip_network("100.64.0.0/10")
 
 
@@ -498,13 +579,9 @@ def main():
     tse.configurar(cache)
     analise.configurar(CONFIG)
     login.configurar(LOGIN)
-    camara.iniciar()
-    gastos.iniciar()
-    alesp.iniciar()
-    emendas.iniciar()
-    sancoes.iniciar()
-    empresas.iniciar()
-    punicoes.iniciar()
+    _conferir_bases()
+    threading.Thread(target=_manter_dados, daemon=True).start()
+    threading.Thread(target=_preparar_historico, daemon=True).start()
     try:
         if args.tailscale:
             servidor = ServidorTailscale(("0.0.0.0", args.porta), Handler)

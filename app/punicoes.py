@@ -12,8 +12,10 @@ O casamento com candidatos usa o CPF completo que o TSE publica; com empresas, o
 import csv
 import io
 import json
+import sys
 import threading
 import time
+import traceback
 from datetime import date, datetime
 from pathlib import Path
 
@@ -43,6 +45,12 @@ _prefixos = {}
 _lock = threading.Lock()
 _rodando = threading.Event()
 _estado = {"etapa": "parado", "erro": None}
+
+
+def registrar_falha(e):
+    """Deixa no log do servidor em que etapa a base falhou, com o erro completo."""
+    print(f"[{__name__}] falhou em \"{_estado.get('etapa')}\": {e}", file=sys.stderr)
+    traceback.print_exc()
 
 
 def _arquivo():
@@ -195,7 +203,8 @@ def _preparar():
         _carregar()
         _estado.update(etapa="pronto", erro="; ".join(erros) or None)
     except Exception as e:
-        _estado.update(etapa="erro", erro=str(e))
+        registrar_falha(e)
+        _estado.update(etapa="erro", erro=f"{_estado.get('etapa')}: {e}")
     finally:
         _rodando.clear()
 

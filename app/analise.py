@@ -975,7 +975,8 @@ def analisar(uf, cargo, id_candidato):
     contas = tse.contas(uf, cargo, id_candidato, sigla_num, bruto.get("numero"))
 
     chance, pares = None, None
-    if cargo in tse.CARGOS_PROPORCIONAIS and uf != "BR":
+    # Sem a base de 2022 pronta (só nos primeiros minutos de um servidor novo), a ficha sai sem a chance.
+    if cargo in tse.CARGOS_PROPORCIONAIS and uf != "BR" and historico.pronto(uf):
         r = historico.ranking(uf, cargo, bruto.get("nomeColigacao"))
         if r:
             linha = next((c for c in r["candidatos"] if c["id"] == bruto["id"]), None)

@@ -1,6 +1,6 @@
 {
-  "criterio": "Votações nominais de mérito no plenário da Câmara (fev/2023 a set/2026), com mais de 300 votos, placar disputado e orientação registrada, cobrindo temas diferentes. Ficaram de fora votações em que lados opostos votaram igual por motivos opostos. Concordar com a frase equivale a votar Sim. Cada pergunta traz o histórico, o que muda, quem defendia cada lado e por quê, e quem tende a ganhar ou perder, com fontes; a situação atual vem direto da Câmara.",
-  "atualizadoEm": "27/09/2026",
+  "criterio": "Votações nominais de mérito no plenário da Câmara (fev/2023 a set/2026), com mais de 300 votos, placar disputado e orientação registrada, cobrindo temas diferentes. Ficaram de fora votações em que lados opostos votaram igual por motivos opostos. Concordar com a frase equivale a votar Sim. Cada pergunta traz o histórico, o que muda, os argumentos de cada lado e quem tende a ganhar ou perder, com fontes. Partidos, governo e nomes de políticos só aparecem depois da sua resposta, para não influenciar; a situação atual vem direto da Câmara.",
+  "atualizadoEm": "29/09/2026",
   "perguntas": [
     {
       "id": "2383287-43",
@@ -10,12 +10,12 @@
       "pratica": "Antes, fundos exclusivos só pagavam imposto no resgate, e o lucro guardado em offshores só pagava quando voltava ao Brasil, o que permitia adiar o imposto por anos. A lei passou a cobrar periodicamente, como já acontecia com os fundos comuns. Para quem investe em fundos comuns, poupança ou Tesouro Direto, nada muda.",
       "depois": "Virou a Lei 14.754/2023 e está em vigor.",
       "ganha": [
-        "Governo federal: arrecada mais sem subir imposto para a maioria."
+        "Cofres públicos: a União arrecada mais sem subir imposto para a maioria."
       ],
       "perde": [
         "Pessoas com grandes fortunas investidas: passam a pagar imposto de renda todo ano sobre esses fundos."
       ],
-      "historia": "Projeto enviado pelo governo Lula em 2023 para aumentar a arrecadação e cumprir a meta das contas públicas. Na Câmara, o relator Pedro Paulo (PSD-RJ) juntou a taxação das offshores com a dos fundos exclusivos e fixou uma alíquota menor, de 8%, para quem quisesse acertar logo o imposto atrasado.",
+      "historia": "Projeto apresentado em 2023 para aumentar a arrecadação federal e cumprir a meta das contas públicas. Na Câmara, o relator juntou a taxação das offshores com a dos fundos exclusivos e fixou uma alíquota menor, de 8%, para quem quisesse acertar logo o imposto atrasado.",
       "fontes": [
         {
           "nome": "Agência Câmara: aprovação do projeto",
@@ -23,17 +23,15 @@
         }
       ],
       "ladoSim": {
-        "quem": "Governo e a maioria dos partidos, inclusive PSD, MDB, PP, União e Republicanos",
         "argumentos": [
           "Iguala a regra dos investimentos dos mais ricos à dos fundos que a maioria dos investidores já usa.",
           "Aumenta a arrecadação sem subir imposto para a maior parte da população."
         ]
       },
       "ladoNao": {
-        "quem": "PL e NOVO",
         "argumentos": [
           "Aumenta a carga de impostos e pode estimular investidores a levar dinheiro para fora do país.",
-          "O governo deveria cortar gastos em vez de buscar mais arrecadação."
+          "O ajuste nas contas deveria vir de corte de gastos, e não de mais arrecadação."
         ]
       }
     },
@@ -54,28 +52,26 @@
         "Empresas de serviços e seus clientes: salões, academias, escritórios e outros serviços tendem a ficar mais caros.",
         "Estados e municípios: perdem o poder de definir sozinhos o ICMS e o ISS."
       ],
-      "historia": "A proposta é de 2019, do deputado Baleia Rossi (MDB-SP). O governo Lula a tornou prioridade em 2023, e o relator Aguinaldo Ribeiro (PP-PB) negociou exceções com estados e setores. O PL foi o único partido a orientar contra, por pedido de Bolsonaro, mas 20 deputados do partido votaram a favor.",
+      "historia": "A proposta é de 2019 e virou prioridade no Congresso em 2023. O relator negociou exceções com estados e setores da economia para reunir os votos necessários para mudar a Constituição.",
       "fontes": [
         {
-          "nome": "Correio Braziliense: como votou o PL",
+          "nome": "Correio Braziliense: como foi a votação na Câmara",
           "url": "https://www.correiobraziliense.com.br/politica/2023/07/5107355-reforma-tributaria-pl-de-bolsonaro-da-20-votos-a-favor-saiba-os-deputados.html"
         },
         {
-          "nome": "Gazeta do Povo: Bolsonaro orienta voto contra",
+          "nome": "Gazeta do Povo: a disputa antes da votação",
           "url": "https://www.gazetadopovo.com.br/republica/bolsonaro-reforma-tributaria-pl-orientar-voto-contra-camara/"
         }
       ],
       "ladoSim": {
-        "quem": "Governo, a maioria dos partidos e 20 deputados do PL",
         "argumentos": [
           "Simplifica um dos sistemas de impostos mais complicados do mundo e acaba com a guerra fiscal entre estados.",
           "Tira o imposto de investimentos e exportações, o que tende a ajudar a economia a crescer."
         ]
       },
       "ladoNao": {
-        "quem": "PL, por orientação de Bolsonaro, e parte do NOVO",
         "argumentos": [
-          "Bolsonaro dizia que a reforma aumentaria impostos, inclusive da cesta básica, e criticava o novo Imposto Seletivo.",
+          "Os críticos diziam que a reforma aumentaria impostos, inclusive da cesta básica, e condenavam o novo Imposto Seletivo.",
           "Estados e municípios perdem autonomia, e a alíquota somada fica entre as mais altas do mundo."
         ]
       }
@@ -86,7 +82,7 @@
       "afirmacao": "Só devem virar terra indígena as áreas que os indígenas ocupavam em 1988, quando a Constituição foi criada.",
       "contexto": "PL 490/2007, aprovado em 30/05/2023.",
       "pratica": "Só poderiam ser reconhecidas como terras indígenas as áreas ocupadas por esses povos em 5 de outubro de 1988, data da Constituição, ou que estavam em disputa naquela data. O texto também facilitava outras atividades econômicas dentro de terras indígenas.",
-      "depois": "No Senado virou o PL 2903/2023 e depois a Lei 14.701/2023: o presidente vetou o marco temporal e o Congresso derrubou o veto. O STF declarou a tese inconstitucional em setembro de 2023 e reafirmou isso em dezembro de 2025 ao julgar a lei, mantendo outros trechos dela.",
+      "depois": "No Senado virou o PL 2903/2023 e depois a Lei 14.701/2023: o marco temporal foi vetado e o Congresso derrubou o veto. O STF declarou a tese inconstitucional em setembro de 2023 e reafirmou isso em dezembro de 2025 ao julgar a lei, mantendo outros trechos dela.",
       "fontes": [
         {
           "nome": "Instituto Socioambiental: STF conclui julgamento da Lei 14.701",
@@ -104,17 +100,15 @@
         "Povos indígenas expulsos antes de 1988: perdem o direito de ter essas terras demarcadas.",
         "Povos com demarcação em andamento: precisam provar que ocupavam a área naquela data."
       ],
-      "historia": "O projeto é de 2007, do deputado Homero Pereira. Em 2023, a Câmara aprovou urgência para votá-lo antes de o STF julgar a mesma tese, que já estava na pauta do tribunal. O governo orientou contra, mas partidos com ministérios no governo, como União, PP, PSD e MDB, votaram em maioria a favor.",
-      "nota": "Partidos que têm ministérios no governo, como União, PP, PSD e MDB, votaram em maioria a favor, contra a orientação do governo.",
+      "historia": "O projeto é de 2007. Em 2023, a Câmara aprovou urgência para votá-lo antes de o STF julgar a mesma tese, que já estava na pauta do tribunal.",
       "ladoSim": {
-        "quem": "Bancada ruralista, PL, União, PP, Republicanos e a maioria do PSD e do MDB",
         "argumentos": [
           "Dá segurança a produtores que ocupam terras há décadas e poderiam perdê-las numa nova demarcação.",
           "Cria uma data objetiva para encerrar disputas de terra."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT, PSOL e organizações indígenas",
+        "quem": "Organizações indígenas",
         "argumentos": [
           "Muitos povos foram expulsos das suas terras antes de 1988 e ficariam sem direito a elas.",
           "A Constituição reconhece o direito dos indígenas às terras que ocupam tradicionalmente, sem fixar data."
@@ -124,10 +118,10 @@
     {
       "id": "2355135-49",
       "tema": "Saneamento",
-      "afirmacao": "O Congresso deve derrubar as regras do governo Lula que deixavam empresas estaduais de água e esgoto continuar atendendo cidades sem licitação.",
+      "afirmacao": "O Congresso deve derrubar os decretos federais de 2023 que deixavam empresas estaduais de água e esgoto continuar atendendo cidades sem licitação.",
       "contexto": "PDL 98/2023, aprovado em 03/05/2023.",
       "pratica": "O Marco do Saneamento, de 2020, exige que as cidades contratem água e esgoto por licitação, aberta a empresas públicas e privadas, e que quem presta o serviço prove ter dinheiro para levar água a 99% e esgoto a 90% da população até 2033. Os decretos davam mais prazo e deixavam, em certos casos, companhias estaduais seguirem sem licitação; derrubá-los volta às regras mais rígidas. Para quem mora na cidade, muda quem cuida da água e do esgoto e com que pressa as obras precisam sair.",
-      "depois": "No Senado houve acordo: em julho de 2023 o governo revogou os dois decretos e publicou outros (11.598 e 11.599) sem os pontos mais contestados. Por isso o projeto não chegou a ser votado no Senado.",
+      "depois": "No Senado houve acordo: em julho de 2023 os dois decretos foram revogados e substituídos por outros (11.598 e 11.599), sem os pontos mais contestados. Por isso o projeto não chegou a ser votado no Senado.",
       "fontes": [
         {
           "nome": "Senado Notícias: acordo sobre os decretos do saneamento",
@@ -144,19 +138,18 @@
       ],
       "perde": [
         "Companhias estaduais de água e esgoto: precisam disputar licitação ou provar em menos tempo que conseguem investir.",
-        "Cidades pequenas e pouco lucrativas: segundo o governo, correm o risco de ficar sem empresa interessada em atendê-las."
+        "Cidades pequenas e pouco lucrativas: segundo os defensores dos decretos, correm o risco de ficar sem empresa interessada em atendê-las."
       ],
-      "historia": "Em abril de 2023, o governo Lula publicou dois decretos mudando a aplicação do Marco do Saneamento de 2020. O deputado Evair de Melo (PP-ES), da oposição, apresentou este projeto para derrubar trechos deles, e a Câmara aprovou o texto do relator Alex Manente (Cidadania-SP).",
-      "nota": "Votar Sim aqui é derrubar as regras do governo. Quem concorda com os decretos do governo deve votar Não.",
+      "historia": "Em abril de 2023, dois decretos federais mudaram a aplicação do Marco do Saneamento de 2020. Um deputado apresentou este projeto para derrubar trechos deles, e a Câmara o aprovou.",
+      "nota": "Votar Sim aqui é derrubar os decretos. Quem concorda com os decretos deve votar Não.",
       "ladoSim": {
-        "quem": "Oposição e centrão: PL, União, PP, MDB, Republicanos e NOVO",
         "argumentos": [
           "Os decretos deixavam estatais renovarem contratos sem licitação e afastavam o investimento privado, necessário para levar água e esgoto a todos até 2033.",
           "Decreto não pode mudar o que a lei aprovada pelo Congresso definiu."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT, PSOL e sindicatos do setor",
+        "quem": "Sindicatos do setor",
         "argumentos": [
           "Sem os decretos, municípios, principalmente os pequenos, poderiam ficar sem quem prestasse o serviço.",
           "As companhias estaduais precisavam de mais tempo para se adequar, e os sindicatos diziam que a mudança levaria a privatizações e contas mais caras."
@@ -177,7 +170,7 @@
       "perde": [
         "Comércio, indústria e serviços: arcam com mais um dia parado ou pagam em dobro quem trabalha."
       ],
-      "historia": "O projeto nasceu no Senado em 2017 e chegou à Câmara em 2021. O 20 de novembro já era feriado em vários estados e cidades; o projeto o estende ao país inteiro. Só PL e NOVO orientaram contra.",
+      "historia": "O projeto nasceu no Senado em 2017 e chegou à Câmara em 2021. O 20 de novembro já era feriado em vários estados e cidades; o projeto o estende ao país inteiro.",
       "fontes": [
         {
           "nome": "Agência Câmara: aprovação do feriado",
@@ -185,14 +178,13 @@
         }
       ],
       "ladoSim": {
-        "quem": "Governo, esquerda e a maioria do centrão",
         "argumentos": [
           "Reconhece a história e a contribuição da população negra, que é a maioria dos brasileiros, e a luta contra o racismo.",
           "Uniformiza uma data que já era feriado em parte do país."
         ]
       },
       "ladoNao": {
-        "quem": "PL, NOVO e entidades do comércio",
+        "quem": "Entidades do comércio",
         "argumentos": [
           "Mais um feriado nacional tem custo para o comércio e a indústria, num mês que já tem outros feriados.",
           "A decisão deveria ficar com estados e cidades."
@@ -202,12 +194,12 @@
     {
       "id": "2520670-52",
       "tema": "Benefícios fiscais",
-      "afirmacao": "Empresas que hoje pagam menos imposto por causa de descontos do governo devem perder 10% desse desconto, e fintechs devem pagar mais imposto, para ajudar a fechar as contas públicas.",
-      "contexto": "PLP 128/2025, aprovado em 16/12/2025. A bancada do PL se dividiu nesta votação.",
+      "afirmacao": "Empresas que hoje pagam menos imposto por causa de benefícios fiscais devem perder 10% desse desconto, e fintechs devem pagar mais imposto, para ajudar a fechar as contas públicas.",
+      "contexto": "PLP 128/2025, aprovado em 16/12/2025.",
       "pratica": "Onde havia isenção ou alíquota zero, passa a ser cobrado 10% do imposto normal; alíquotas reduzidas, créditos presumidos e outros descontos encolhem 10%. Vale para PIS/Cofins, IPI, Imposto de Importação, IRPJ, CSLL e a contribuição previdenciária das empresas. No lucro presumido, regime comum de empresas médias, o aumento só atinge a parte do faturamento acima de R$ 5 milhões por ano. A mesma lei sobe a contribuição sobre o lucro (CSLL) de fintechs e outras financeiras em etapas até 2028, sobe de 15% para 17,5% o imposto sobre juros sobre capital próprio, uma forma de a empresa pagar os sócios, e proíbe criar novos benefícios sem compensação quando o total passar de 2% do PIB. Ficaram de fora do corte o Simples Nacional, a Zona Franca de Manaus, a cesta básica, o Minha Casa Minha Vida, o Prouni, as entidades sem fins lucrativos e a desoneração da folha.",
       "depois": "Virou a Lei Complementar 224/2025, com vetos parciais, e começou a valer em 2026.",
       "ganha": [
-        "Governo federal: arrecada mais para equilibrar as contas."
+        "Cofres públicos: a União arrecada mais para equilibrar as contas."
       ],
       "perde": [
         "Agronegócio: adubos, sementes e defensivos passam a pagar parte do PIS e da Cofins.",
@@ -216,7 +208,7 @@
         "Fintechs e financeiras: pagam mais imposto sobre o lucro.",
         "Sócios de grandes empresas: pagam mais imposto sobre os juros sobre capital próprio que recebem."
       ],
-      "historia": "O projeto é do deputado Mauro Benevides Filho (PDT-CE). No fim de 2025, o governo precisava de dinheiro para fechar o Orçamento de 2026 depois de perder o aumento do IOF e a medida provisória que taxava bets, fintechs e juros sobre capital próprio. O relator Aguinaldo Ribeiro (PP-PB) juntou o corte dos benefícios com essas taxações num acordo votado na semana do Orçamento.",
+      "historia": "No fim de 2025 faltava dinheiro para fechar o Orçamento de 2026, depois que o aumento do IOF e a medida provisória que taxava bets, fintechs e juros sobre capital próprio não foram adiante. O relator juntou o corte dos benefícios com essas taxações num acordo votado na semana do Orçamento.",
       "fontes": [
         {
           "nome": "Agência Câmara: aprovação do projeto",
@@ -228,17 +220,15 @@
         }
       ],
       "ladoSim": {
-        "quem": "Governo, esquerda e a maior parte do centrão (PSD, PP, União e Republicanos)",
         "argumentos": [
           "Muitos benefícios fiscais são antigos, nunca foram avaliados e custam centenas de bilhões por ano.",
           "Ajuda a fechar as contas sem cortar serviços públicos."
         ]
       },
       "ladoNao": {
-        "quem": "NOVO, pouco mais da metade do PL e parte do MDB",
         "argumentos": [
           "Na prática é aumento de imposto para os setores atingidos, o que pode encarecer produtos e custar empregos.",
-          "O ajuste deveria vir de corte nas despesas do governo, e não de mais arrecadação."
+          "O ajuste deveria vir de corte de despesas públicas, e não de mais arrecadação."
         ]
       }
     },
@@ -256,7 +246,7 @@
         "Os demais consumidores: podem pagar tarifas um pouco maiores para cobrir o desconto.",
         "Estados e cidades: perdem liberdade para definir as próprias regras de desconto."
       ],
-      "historia": "O projeto veio do Senado, do senador Eduardo Braga (MDB-AM). Na Câmara, o relator Pedro Campos (PSB-PE) definiu um desconto nacional, parecido com a tarifa social que já existe na conta de luz.",
+      "historia": "O projeto veio do Senado. Na Câmara, o relator definiu um desconto nacional, parecido com a tarifa social que já existe na conta de luz.",
       "fontes": [
         {
           "nome": "Agência Câmara: a nova lei",
@@ -264,14 +254,12 @@
         }
       ],
       "ladoSim": {
-        "quem": "Governo e quase todos os partidos",
         "argumentos": [
           "Água e esgoto são serviços essenciais, e o desconto ajuda as famílias mais pobres a manter a conta em dia.",
           "Padroniza um direito que antes variava de cidade para cidade."
         ]
       },
       "ladoNao": {
-        "quem": "PL e NOVO",
         "argumentos": [
           "O desconto de uns acaba pago pelos demais consumidores, com contas mais caras para eles.",
           "Cada estado e cidade deveria decidir as próprias regras de tarifa."
@@ -302,16 +290,14 @@
         "Agressores: respondem por crime mesmo quando a vítima concordou com o encontro.",
         "Casais que querem se reconciliar: precisam antes pedir à Justiça para suspender a medida."
       ],
-      "historia": "O projeto, de 2023, responde a decisões judiciais que absolviam o agressor quando a vítima tinha aceitado o encontro. A relatora Rogéria Santos (Republicanos-BA) apresentou o texto votado. PL e NOVO tentaram adiar a votação e propuseram mudanças, que foram derrotadas.",
+      "historia": "O projeto, de 2023, responde a decisões judiciais que absolviam o agressor quando a vítima tinha aceitado o encontro. Na votação, pedidos para adiá-la e propostas de mudança no texto foram derrotados.",
       "ladoSim": {
-        "quem": "Governo e a maioria dos partidos, inclusive Republicanos, PSD e União",
         "argumentos": [
           "Muitas vítimas são pressionadas ou manipuladas a \"concordar\"; a regra protege quem está vulnerável.",
           "Evita que a medida protetiva perca efeito na prática."
         ]
       },
       "ladoNao": {
-        "quem": "PL e NOVO",
         "argumentos": [
           "A regra trata a mulher adulta como incapaz de decidir e pode punir reconciliações.",
           "O caminho seria a vítima pedir à Justiça para rever a medida, em vez de o encontro virar crime automaticamente."
@@ -321,10 +307,10 @@
     {
       "id": "2515648-44",
       "tema": "Impostos",
-      "afirmacao": "O Congresso deve cancelar o aumento do IOF, imposto sobre empréstimos, câmbio e compras no exterior, que o governo fez em 2025.",
+      "afirmacao": "O Congresso deve cancelar o aumento do IOF, imposto sobre empréstimos, câmbio e compras no exterior, feito por decreto federal em 2025.",
       "contexto": "PDL 214/2025, aprovado em 25/06/2025.",
-      "pratica": "Em maio de 2025 o governo aumentou por decreto o IOF sobre operações como crédito para empresas, câmbio e alguns investimentos, para ajudar a cumprir a meta fiscal. O projeto derrubava esse decreto.",
-      "depois": "O Senado também aprovou e o decreto foi derrubado. O governo recorreu ao STF e, em julho de 2025, o ministro Alexandre de Moraes restabeleceu o decreto, exceto a cobrança sobre o chamado \"risco sacado\" (uma forma de crédito usada pelo varejo).",
+      "pratica": "Em maio de 2025, um decreto federal aumentou o IOF sobre operações como crédito para empresas, câmbio e alguns investimentos, para ajudar a cumprir a meta fiscal. O projeto derrubava esse decreto.",
+      "depois": "O Senado também aprovou e o decreto foi derrubado. O caso foi ao STF e, em julho de 2025, o ministro Alexandre de Moraes restabeleceu o decreto, exceto a cobrança sobre o chamado \"risco sacado\" (uma forma de crédito usada pelo varejo).",
       "fontes": [
         {
           "nome": "Poder360: decisão de Moraes sobre o IOF",
@@ -340,22 +326,20 @@
         "Quem viaja ou compra em dólar: paga menos imposto no câmbio e nos gastos no exterior."
       ],
       "perde": [
-        "Governo federal: perde arrecadação e, segundo ele, teria de cortar gastos em áreas como saúde e educação."
+        "Cofres públicos: a União perde arrecadação e, segundo quem defendia o aumento, teria de cortar gastos em áreas como saúde e educação."
       ],
-      "historia": "Em maio de 2025, o governo aumentou o IOF por decreto para cumprir a meta das contas públicas. Depois das críticas, reduziu parte do aumento, mas o Congresso quis derrubá-lo. O presidente da Câmara, Hugo Motta, pautou a derrubada de surpresa, e o governo teve a maior derrota do mandato na Câmara.",
-      "nota": "Votar Sim aqui é derrubar o aumento do imposto feito pelo governo. Quem concorda com o aumento deve votar Não.",
+      "historia": "Em maio de 2025, o IOF foi aumentado por decreto federal para ajudar a cumprir a meta das contas públicas. Depois das críticas, parte do aumento foi reduzida, mas o Congresso decidiu derrubá-lo. A derrubada foi pautada de surpresa na Câmara.",
+      "nota": "Votar Sim aqui é derrubar o aumento do imposto. Quem concorda com o aumento deve votar Não.",
       "ladoSim": {
-        "quem": "Oposição e centrão: PL, União, PP, Republicanos, MDB, PSD e NOVO",
         "argumentos": [
           "O IOF serve para regular a economia, não para arrecadar, e o aumento encarecia o crédito e o câmbio.",
-          "O governo deveria cortar gastos em vez de aumentar impostos."
+          "O ajuste nas contas deveria vir de corte de gastos, e não de aumento de impostos."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT e PSOL",
         "argumentos": [
           "A Constituição permite mudar o IOF por decreto, e sem essa receita seria preciso cortar em áreas como saúde e educação.",
-          "O Congresso estaria invadindo uma decisão que cabe ao governo."
+          "O Congresso estaria invadindo uma decisão que a Constituição dá ao Poder Executivo."
         ]
       }
     },
@@ -382,18 +366,16 @@
       "perde": [
         "Os cofres públicos: bancam os descontos e os juros menores."
       ],
-      "historia": "O projeto é do deputado Domingos Neto. O relator Afonso Hamm (PP-RS), da bancada ruralista, ampliou o texto para usar até R$ 30 bilhões do Fundo Social do pré-sal. O governo tinha oferecido uma medida provisória com R$ 12 bilhões e acusou o relator de quebrar um acordo.",
+      "historia": "O relator ampliou o texto para usar até R$ 30 bilhões do Fundo Social do pré-sal. Havia uma proposta alternativa, por medida provisória, com R$ 12 bilhões, e a versão aprovada foi criticada por ir além do que tinha sido negociado.",
       "ladoSim": {
-        "quem": "Bancada ruralista, PL, centrão e NOVO",
         "argumentos": [
           "Eventos climáticos e queda de preços deixaram muitos produtores sem conseguir pagar; sem ajuda, podem perder terras e máquinas.",
           "Não é perdão de dívida: o produtor continua pagando, com prazo maior e juros menores."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT e PSOL",
         "argumentos": [
-          "O custo para os cofres públicos é alto, e o governo já tinha outra proposta de renegociação.",
+          "O custo para os cofres públicos é alto, e já havia uma proposta de renegociação menor, por medida provisória.",
           "Pode beneficiar também grandes produtores e criar a expectativa de novos perdões de dívida."
         ]
       }
@@ -402,7 +384,7 @@
       "id": "2270800-160",
       "tema": "Congresso e Justiça",
       "afirmacao": "Deputados e senadores só devem poder ser processados no STF se a Câmara ou o Senado autorizarem.",
-      "contexto": "PEC 3/2021, 2º turno em 16/09/2025. O governo não orientou voto nesta.",
+      "contexto": "PEC 3/2021, 2º turno em 16/09/2025.",
       "pratica": "Deputados e senadores só poderiam virar réus em processo criminal no STF se a Câmara ou o Senado autorizassem. Uma regra parecida existiu até 2001, quando o próprio Congresso a derrubou depois de quase todos os pedidos de autorização ficarem parados. O texto também estendia o foro no STF a presidentes de partidos.",
       "depois": "Em 24/09/2025 a CCJ do Senado rejeitou a PEC por unanimidade, e ela foi arquivada.",
       "fontes": [
@@ -415,7 +397,7 @@
           "url": "https://agenciabrasil.ebc.com.br/politica/noticia/2025-09/pec-da-blindagem-e-aprovada-por-deputados-e-vai-ao-senado"
         },
         {
-          "nome": "Agência Brasil: Motta defende a PEC",
+          "nome": "Agência Brasil: a defesa da PEC na Câmara",
           "url": "https://agenciabrasil.ebc.com.br/politica/noticia/2025-09/motta-defende-pec-da-blindagem-e-diz-que-debate-foi-distorcido"
         }
       ],
@@ -426,17 +408,15 @@
       "perde": [
         "Vítimas e acusadores de parlamentares: o processo passa a depender de uma votação no Congresso."
       ],
-      "historia": "A proposta é de 2021 e voltou à pauta em 2025, enquanto avançavam no STF investigações sobre desvio de emendas parlamentares. O presidente da Câmara, Hugo Motta, a colocou em votação dizendo que ela protege o mandato contra excessos do Judiciário. A Câmara também aprovou voto secreto para essas autorizações.",
-      "nota": "O governo não orientou voto, e o PT se dividiu. NOVO, que costuma votar com a oposição, votou contra.",
+      "historia": "A proposta é de 2021 e voltou à pauta em 2025, enquanto avançavam no STF investigações sobre desvio de emendas parlamentares. A presidência da Câmara a colocou em votação dizendo que ela protege o mandato contra excessos do Judiciário. A Câmara também aprovou voto secreto para essas autorizações.",
       "ladoSim": {
-        "quem": "Centrão e oposição: PL, União, PP, Republicanos, MDB, parte do PSD e 10 deputados do PT",
         "argumentos": [
           "Protege o exercício do mandato contra investigações que os defensores consideram abusivas.",
           "Retoma uma regra que existia no texto original da Constituição de 1988."
         ]
       },
       "ladoNao": {
-        "quem": "PSOL, NOVO, a maior parte do PT e organizações anticorrupção",
+        "quem": "Organizações anticorrupção",
         "argumentos": [
           "Criaria impunidade, como aconteceu antes de 2001, quando quase todos os pedidos para processar parlamentares ficaram parados.",
           "Poderia barrar investigações sobre desvio de dinheiro de emendas parlamentares."
@@ -446,7 +426,7 @@
     {
       "id": "2541109-38",
       "tema": "Saúde e educação",
-      "afirmacao": "O governo deve poder gastar mais com saúde e educação usando dinheiro do pré-sal, sem que esse gasto conte no limite de despesas.",
+      "afirmacao": "A União deve poder gastar mais com saúde e educação usando dinheiro do pré-sal, sem que esse gasto conte no limite de despesas.",
       "contexto": "PLP 163/2025, aprovado em 24/09/2025.",
       "pratica": "Permite que, por cinco anos, uma parte do dinheiro do Fundo Social do pré-sal (5% da receita do fundo por ano) seja gasta em saúde e educação públicas sem contar no limite de despesas nem na meta fiscal do arcabouço.",
       "depois": "O Senado fez mudanças, a Câmara aprovou de novo, e o projeto virou a Lei Complementar 223, sancionada em dezembro de 2025.",
@@ -467,16 +447,14 @@
         "Contas públicas: o gasto fora do limite pode aumentar a dívida.",
         "Fundo Social do pré-sal: guarda menos dinheiro para o futuro."
       ],
-      "historia": "O projeto é do deputado Isnaldo Bulhões Jr. (MDB-AL), com apoio do governo. Ele libera cerca de R$ 1,5 bilhão por ano do Fundo Social do pré-sal para saúde e educação sem que esse gasto conte no limite de despesas.",
+      "historia": "O projeto libera cerca de R$ 1,5 bilhão por ano do Fundo Social do pré-sal para saúde e educação sem que esse gasto conte no limite de despesas.",
       "ladoSim": {
-        "quem": "Governo, esquerda, MDB, PSD e Republicanos",
         "argumentos": [
           "Libera mais dinheiro para saúde e educação sem aumentar impostos.",
           "O dinheiro vem de uma receita específica, o pré-sal, e o prazo é limitado a cinco anos."
         ]
       },
       "ladoNao": {
-        "quem": "PL, NOVO, metade do União e parte do PP",
         "argumentos": [
           "Cada exceção enfraquece a regra fiscal e a confiança de que ela será cumprida.",
           "O gasto fora do limite pode aumentar a dívida pública."
@@ -487,9 +465,9 @@
       "id": "2579832-62",
       "tema": "Segurança pública",
       "afirmacao": "O projeto contra facções deve ser aprovado com as mudanças feitas na Câmara: penas ainda maiores e o dinheiro apreendido indo mais para os estados do que para a Polícia Federal.",
-      "contexto": "PL 5582/2025, aprovado em 18/11/2025 na versão do relator Guilherme Derrite (PP-SP). O projeto original era do governo, que orientou voto contra essa versão.",
+      "contexto": "PL 5582/2025, aprovado em 18/11/2025 na versão do relator.",
       "pratica": "Cria o crime de \"domínio social estruturado\", com pena de 20 a 40 anos, aumenta as penas de crimes ligados às facções (homicídio passa a 20 a 40 anos, roubo a 12 a 30) e proíbe indulto e livramento condicional nesses casos. Os bens apreendidos em investigações estaduais vão para fundos dos estados; os de investigações da Polícia Federal, para um fundo nacional dividido com os estados.",
-      "depois": "O Senado aprovou uma nova versão em dezembro de 2025, a Câmara concluiu a votação em fevereiro de 2026, e o presidente sancionou a Lei 15.358/2026 em março, com dois vetos.",
+      "depois": "O Senado aprovou uma nova versão em dezembro de 2025, a Câmara concluiu a votação em fevereiro de 2026, e a Lei 15.358/2026 foi sancionada em março, com dois vetos.",
       "fontes": [
         {
           "nome": "Senado Notícias: Lei Antifacção entra em vigor",
@@ -510,19 +488,17 @@
       ],
       "perde": [
         "Líderes e integrantes de facções: penas de 20 a 40 anos, sem indulto nem livramento condicional.",
-        "Polícia Federal: segundo o governo, perde parte do dinheiro dos bens que apreende, que passa a um fundo dividido com os estados."
+        "Polícia Federal: segundo os críticos da mudança, perde parte do dinheiro dos bens que apreende, que passa a um fundo dividido com os estados."
       ],
-      "nota": "Votar Não aqui não era votar contra penas maiores: o projeto original, do próprio governo, também endurecia as penas. A disputa foi sobre as mudanças do relator.",
-      "historia": "O projeto antifacção foi enviado pelo governo Lula em 2025. O relator, Guilherme Derrite (PP-SP), reescreveu o texto seis vezes sem acordo com o governo, que orientou voto contra a versão final dele.",
+      "nota": "Votar Não aqui não era votar contra penas maiores: o projeto original também endurecia as penas. A disputa foi sobre as mudanças do relator, principalmente sobre para onde vai o dinheiro apreendido.",
+      "historia": "O projeto antifacção foi apresentado em 2025. Na Câmara, o relator reescreveu o texto seis vezes sem acordo com os autores da proposta original, e a versão final mudou pontos centrais dela.",
       "ladoSim": {
-        "quem": "PL, NOVO, PSD, MDB, União, PP e Republicanos",
         "argumentos": [
           "As facções dominam territórios, e as penas atuais não intimidam.",
           "Os estados, que fazem a maior parte do combate ao crime, passam a ficar com os bens apreendidos nas próprias investigações."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT e PSOL",
         "argumentos": [
           "A versão tira dinheiro da Polícia Federal, que combate facções que atuam no país inteiro.",
           "Um crime novo separado da Lei de Organizações Criminosas pode gerar conflito entre as leis e atrapalhar processos."
@@ -535,7 +511,7 @@
       "afirmacao": "As penas dos condenados pelos ataques de 8 de janeiro de 2023 devem ser reduzidas.",
       "contexto": "Substitutivo ao PL 2162/2023, aprovado em 09/12/2025.",
       "pratica": "Muda as regras de cálculo de pena para crimes contra o Estado Democrático de Direito, o que reduz as penas dos condenados pelos atos de 8 de janeiro de 2023. Também pode reduzir penas de condenados pela tentativa de golpe julgada pelo STF em 2025. Foi a alternativa aprovada no lugar de uma anistia total, que era a proposta original do projeto.",
-      "depois": "O Senado aprovou (48 a 25) e o presidente vetou o texto inteiro em 8 de janeiro de 2026. Em 30 de abril de 2026 o Congresso derrubou o veto (318 a 144 na Câmara e 49 a 24 no Senado), e o texto virou lei.",
+      "depois": "O Senado aprovou (48 a 25) e o texto foi vetado integralmente em 8 de janeiro de 2026. Em 30 de abril de 2026 o Congresso derrubou o veto (318 a 144 na Câmara e 49 a 24 no Senado), e o texto virou lei.",
       "fontes": [
         {
           "nome": "Agência Câmara: Congresso derruba veto",
@@ -556,19 +532,17 @@
       "perde": [
         "Instituições democráticas: na visão dos críticos, punições menores podem estimular novos ataques."
       ],
-      "historia": "O projeto original, de 2023, previa anistia para os condenados pelo 8 de janeiro. Em dezembro de 2025, o relator Paulinho da Força (Solidariedade-SP) trocou a anistia por uma redução de penas, e o texto foi votado de madrugada, o que governistas criticaram por quebrar a negociação prometida.",
+      "historia": "O projeto original, de 2023, previa anistia para os condenados pelo 8 de janeiro. Em dezembro de 2025, o relator trocou a anistia por uma redução de penas, e o texto foi votado de madrugada, o que os críticos disseram quebrar a negociação prometida.",
       "ladoSim": {
-        "quem": "PL, NOVO e centrão (União, PP, Republicanos, MDB e parte do PSD)",
         "argumentos": [
           "Muitas penas, de até 17 anos para pessoas sem papel de liderança, foram desproporcionais.",
           "É um caminho de pacificação política sem anistia total."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT e PSOL",
         "argumentos": [
           "Reduzir as penas de quem atacou as instituições enfraquece a proteção da democracia e estimula novos ataques.",
-          "O governo considerou o projeto inconstitucional e feito para beneficiar os condenados pela tentativa de golpe."
+          "Os críticos consideraram o projeto inconstitucional e feito para beneficiar os condenados pela tentativa de golpe."
         ]
       }
     },
@@ -578,7 +552,7 @@
       "afirmacao": "Donos de fazendas perto da fronteira com títulos antigos de terras públicas devem conseguir regularizá-los com regras mais fáceis.",
       "contexto": "PL 4497/2024, texto do Senado aprovado em 09/12/2025.",
       "pratica": "Imóveis rurais na faixa de até 150 km da fronteira que vieram de terras públicas vendidas ou concedidas por estados no passado precisam ser ratificados pela União para o título valer. O projeto reabria e ampliava o prazo para isso e impedia os cartórios de negar o registro por causa de processos de demarcação de terra indígena ou de criação de unidade de conservação ainda não concluídos.",
-      "depois": "O presidente vetou o projeto inteiro em janeiro de 2026.",
+      "depois": "O projeto foi vetado integralmente em janeiro de 2026.",
       "fontes": [
         {
           "nome": "Senado Notícias: vetado novo prazo",
@@ -590,21 +564,20 @@
       ],
       "perde": [
         "Povos indígenas e áreas de conservação: processos em andamento deixam de impedir o registro no cartório.",
-        "União: segundo o governo, perde controle sobre terras públicas na fronteira."
+        "União: segundo os críticos, perde controle sobre terras públicas na fronteira."
       ],
-      "historia": "O projeto é do deputado Tião Medeiros (PP-PR), da bancada ruralista. A votação foi do texto que voltou do Senado: dava 15 anos para donos de imóveis na faixa de fronteira regularizarem títulos antigos, e imóveis acima de 2.500 hectares dependeriam do Congresso, com aprovação automática se ele não se manifestasse em dois anos.",
+      "historia": "O projeto começou na Câmara em 2024. A votação foi do texto que voltou do Senado: dava 15 anos para donos de imóveis na faixa de fronteira regularizarem títulos antigos, e imóveis acima de 2.500 hectares dependeriam do Congresso, com aprovação automática se ele não se manifestasse em dois anos.",
       "ladoSim": {
-        "quem": "Bancada ruralista, PL, centrão e NOVO",
         "argumentos": [
           "Dá segurança jurídica a quem ocupa e produz nessas terras há décadas.",
           "Simplifica um processo que deixava muitos proprietários sem título válido."
         ]
       },
       "ladoNao": {
-        "quem": "Governo, PT, PSOL e organizações indígenas e ambientais",
+        "quem": "Organizações indígenas e ambientais",
         "argumentos": [
           "Poderia regularizar terras em áreas em disputa e dificultar demarcações indígenas e unidades de conservação.",
-          "O governo vetou dizendo que a regra contraria a função social da terra prevista na Constituição e ameaça o patrimônio da União na fronteira."
+          "A regra contrariaria a função social da terra prevista na Constituição e ameaçaria o patrimônio da União na fronteira."
         ]
       }
     }

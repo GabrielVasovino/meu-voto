@@ -17,8 +17,10 @@ import bisect
 import json
 import re
 import statistics
+import sys
 import threading
 import time
+import traceback
 import unicodedata
 import xml.etree.ElementTree as ET
 import zipfile
@@ -89,6 +91,12 @@ _estado = {"etapa": "parado", "erro": None}
 _resumo = None
 _indice = None
 _desempenho = {"gerado": None, "tabela": {}}
+
+
+def registrar_falha(e):
+    """Deixa no log do servidor em que etapa a base falhou, com o erro completo."""
+    print(f"[{__name__}] falhou em \"{_estado.get('etapa')}\": {e}", file=sys.stderr)
+    traceback.print_exc()
 
 
 def normalizar(texto):
@@ -380,7 +388,8 @@ def _preparar():
             if p.name != _arquivo().name:
                 p.unlink(missing_ok=True)
     except Exception as e:  # noqa: BLE001 - mostramos o erro na interface
-        _estado.update(etapa="erro", erro=str(e))
+        registrar_falha(e)
+        _estado.update(etapa="erro", erro=f"{_estado.get('etapa')}: {e}")
     finally:
         _rodando.clear()
 

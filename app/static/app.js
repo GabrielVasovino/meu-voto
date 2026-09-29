@@ -376,7 +376,7 @@ async function atualizarEmSegundoPlano(slot, voto) {
   } catch { /* sem internet: fica com o que já estava salvo */ }
 }
 
-// ---------- peças usadas pela ficha (ficha.js) e pelo painel de fornecedores ----------
+// ---------- peças usadas pela ficha (ficha.js) e pela ficha da empresa (empresa.js) ----------
 
 function htmlTemas(temas, destaques) {
   const d = new Set((destaques || []).map((t) => t[0]));
@@ -430,47 +430,6 @@ function linhaComparacao(item) {
   </div>`;
 }
 
-async function carregarFornecedores() {
-  const corpo = $("#ajuda-corpo");
-  corpo.innerHTML = `<p class="carregando">Montando o panorama de fornecedores de ${esc(estado.uf)}…</p>`;
-  let p;
-  try {
-    p = await api(`/api/gastos/panorama?uf=${estado.uf}`);
-  } catch (e) {
-    corpo.innerHTML = `<p class="carregando">${esc(e.message)}</p>`;
-    return;
-  }
-  if (ajuda.cargo !== "fornecedores") return;
-  if (!p.pronto) {
-    corpo.innerHTML = `<p class="carregando">Preparando os dados de despesas de todas as campanhas. Na primeira vez isso leva uns 2 minutos…</p>`;
-    setTimeout(() => { if (ajuda.cargo === "fornecedores") carregarFornecedores(); }, 8000);
-    return;
-  }
-  const linha = (f, i) => `<tr data-busca="${esc((f.nome + " " + f.cnpj + " " + (f.atividade || "")).toLowerCase())}">
-      <td class="quem">${esc(f.nome)}<small>${esc(f.atividade || "")}</small></td>
-      <td class="num">${brlCompacto.format(f.total)}</td>
-      <td>${numero.format(f.candidatos)} em ${esc(p.uf)}${f.candidatosPais > f.candidatos ? `<small>${numero.format(f.candidatosPais)} no país, em ${f.ufs} estados</small>` : ""}</td>
-      <td>${f.partidos} ${f.partidos === 1 ? "partido" : "partidos"}<small>${esc(f.partidoPrincipal)}: ${pct.format(f.concentracaoPartido)}</small></td>
-      <td>${f.em2022 ? `${numero.format(f.em2022)} campanhas` : `<span class="badge">Estreante</span>`}</td>
-      <td><button type="button" class="btn pequeno" data-empresa="${esc(f.cnpj)}">Ver a empresa</button></td>
-    </tr>`;
-  corpo.innerHTML = `<div class="cartao">
-      <h3>Fornecedores de campanha em ${esc(UFS[estado.uf] || estado.uf)}</h3>
-      <p class="explica">As ${p.fornecedores.length} empresas que mais receberam de campanhas no estado em 2026. Juntas, as campanhas daqui já contrataram ${brlCompacto.format(p.totalUf || 0)} em despesas. Em Ver a empresa você encontra o cadastro na Receita, os sócios, todas as campanhas que ela atende e um resumo do que chama atenção.</p>
-      <input type="search" id="busca-fornecedor" placeholder="Buscar por nome, CNPJ ou atividade" aria-label="Buscar fornecedor" style="width:100%;margin-bottom:12px">
-      <div class="tabela-rolagem"><table class="lista tabela-fornecedores">
-        <thead><tr><th>Fornecedor</th><th class="num">Recebeu no estado</th><th>Campanhas</th><th>Partidos</th><th>Em 2022</th><th></th></tr></thead>
-        <tbody>${p.fornecedores.map(linha).join("")}</tbody></table></div>
-      <p class="nota-pequena">Redes sociais e meios de pagamento aparecem no topo porque atendem quase todas as campanhas. Os dados são das prestações de contas de 2026 e 2022 entregues ao TSE, atualizados em ${esc(p.geradoEm)}.</p>
-    </div>`;
-  $("#busca-fornecedor").addEventListener("input", (e) => {
-    const q = e.target.value.trim().toLowerCase();
-    corpo.querySelectorAll("tr[data-busca]").forEach((tr) => {
-      tr.hidden = q && !tr.dataset.busca.includes(q);
-    });
-  });
-}
-
 function barras(itens, total, formato = (v) => brl.format(v)) {
   const max = Math.max(...itens.map((i) => i.valor), 1);
   return `<div class="barras">${itens.map((i) => {
@@ -503,7 +462,6 @@ function cargosAjuda() {
     { cargo: 5, rotulo: "Senado", slot: "senador_1" },
     { cargo: 3, rotulo: "Governo do estado", slot: "governador" },
     { cargo: 1, rotulo: "Presidência", slot: "presidente" },
-    { cargo: "fornecedores", rotulo: "Fornecedores de campanha" },
   ];
 }
 
@@ -526,8 +484,7 @@ function montarAjuda() {
   const itens = cargosAjuda();
   if (!itens.some((i) => i.cargo === ajuda.cargo)) ajuda.cargo = 6;
   const item = itens.find((i) => i.cargo === ajuda.cargo);
-  if (item.cargo === "fornecedores") carregarFornecedores();
-  else if (item.proporcional) carregarProporcional(item);
+  if (item.proporcional) carregarProporcional(item);
   else carregarMajoritario(item);
 }
 

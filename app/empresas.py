@@ -10,9 +10,11 @@ import csv
 import io
 import json
 import re
+import sys
 import tempfile
 import threading
 import time
+import traceback
 import unicodedata
 import zipfile
 from pathlib import Path
@@ -33,6 +35,12 @@ _indice = None
 _lock = threading.Lock()
 _rodando = threading.Event()
 _estado = {"etapa": "parado", "erro": None, "progresso": None}
+
+
+def registrar_falha(e):
+    """Deixa no log do servidor em que etapa a base falhou, com o erro completo."""
+    print(f"[{__name__}] falhou em \"{_estado.get('etapa')}\": {e}", file=sys.stderr)
+    traceback.print_exc()
 
 
 def _pasta():
@@ -198,7 +206,8 @@ def _preparar():
         _carregar()
         _estado.update(etapa="pronto", progresso=None)
     except Exception as e:  # sem internet ou Receita fora do ar: segue com o índice anterior, se houver
-        _estado.update(etapa="erro", erro=str(e), progresso=None)
+        registrar_falha(e)
+        _estado.update(etapa="erro", erro=f"{_estado.get('etapa')}: {e}", progresso=None)
     finally:
         _rodando.clear()
 

@@ -20,8 +20,8 @@ import io
 import json
 import math
 import threading
+import traceback
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
 
 import gastos
 import tse
@@ -31,9 +31,12 @@ URL_CAND_2022 = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/co
 URL_VOTOS_PARTIDO_2022 = (
     "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_partido_munzona/votacao_partido_munzona_2022.zip"
 )
-URL_RESULTADO_2022 = (
-    "https://resultados.tse.jus.br/oficial/ele2022/546/dados-simplificados/{uf}/{uf}-c{cargo:04d}-e000546-r.json"
-)
+# O site de resultados (resultados.tse.jus.br) saiu do ar para 2022; os dados abertos do TSE ficam para sempre.
+URL_VOTOS_CAND_2022 = "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_candidato_munzona/votacao_candidato_munzona_2022.zip"
+URL_VAGAS_2022 = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_vagas/consulta_vagas_2022.zip"
+# Como o TSE escreve o resultado nos dados abertos -> como a interface mostra.
+SITUACOES_2022 = {"ELEITO POR QP": "Eleito por QP", "ELEITO POR MÉDIA": "Eleito por média", "SUPLENTE": "Suplente",
+                  "NÃO ELEITO": "Não eleito"}
 TTL_HISTORICO = 90 * 24 * tse.HORA  # resultado de 2022 não muda mais
 URL_CAND_2024 = "https://cdn.tse.jus.br/estatistica/sead/odsele/consulta_cand/consulta_cand_2024.zip"
 URL_VOTOS_CAND_2024 = "https://cdn.tse.jus.br/estatistica/sead/odsele/votacao_candidato_munzona/votacao_candidato_munzona_2024.zip"
@@ -83,19 +86,65 @@ def municipal(uf):
     with _lock:
         if uf in _municipais:
             return _municipais[uf]
-    arq = tse._cache_dir / "historico" / f"municipal2024_{uf}.json"
-    if arq.exists():
-        m = json.loads(arq.read_text(encoding="utf-8"))
-    else:
-        try:
-            m = _montar_municipal(uf)
-        except Exception:  # sem a eleição municipal, a força usa só 2022, como antes
-            return {}
-        arq.parent.mkdir(parents=True, exist_ok=True)
-        arq.write_text(json.dumps(m, ensure_ascii=False), encoding="utf-8")
+    try:
+        m = _guardado(f"municipal2024_{uf}.json", lambda: _montar_municipal(uf))
+    except Exception:  # sem a eleição municipal, a força usa só 2022, como antes (tenta de novo ao reiniciar)
+        m = {}
     with _lock:
         _municipais[uf] = m
     return m
+
+
+_preparando = set()
+
+
+def pronto(uf):
+    """True se a base de 2022 e os votos de 2024 do estado já estão montados, e as telas de deputado respondem na hora."""
+    pasta = tse._cache_dir / "historico"
+    with _lock:
+        tem_base = uf in _bases or (pasta / f"base2022_{uf}.json").exists()
+        tem_municipal = uf == "DF" or uf in _municipais or (pasta / f"municipal2024_{uf}.json").exists()
+    return tem_base and tem_municipal
+
+
+def preparar(uf):
+    """Monta a base do estado em segundo plano (na primeira vez leva de segundos a 2 minutos, conforme o estado)."""
+    with _lock:
+        if uf in _preparando:
+            return
+        _preparando.add(uf)
+
+    def rodar():
+        try:
+            base(uf)
+            municipal(uf)
+        except Exception:  # noqa: BLE001 - a próxima visita tenta de novo
+            traceback.print_exc()
+        finally:
+            with _lock:
+                _preparando.discard(uf)
+
+    threading.Thread(target=rodar, daemon=True).start()
+
+
+_locks_arquivo = {}
+
+
+def _guardado(nome, montar):
+    """Lê o arquivo da pasta historico do cache ou, se ele não existir, monta e grava. Um estado é montado uma
+    vez só, mesmo quando a preparação em segundo plano e um visitante pedem o mesmo estado ao mesmo tempo."""
+    arq = tse._cache_dir / "historico" / nome
+    with _lock:
+        lock = _locks_arquivo.setdefault(nome, threading.Lock())
+    with lock:
+        if arq.exists():
+            return json.loads(arq.read_text(encoding="utf-8"))
+        dados = montar()
+        arq.parent.mkdir(parents=True, exist_ok=True)
+        tmp = arq.with_suffix(".tmp")
+        tmp.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+        tmp.replace(arq)
+        return dados
 
 
 def cargos_proporcionais(uf):
@@ -112,18 +161,20 @@ def _montar_base(uf):
     cargos = cargos_proporcionais(uf)
     base = {"cargos": {}, "candidatos": {}}
 
+    for r in zipremoto.linhas_csv(URL_VAGAS_2022, f"consulta_vagas_2022_{uf}.csv"):
+        if int(r["CD_CARGO"]) in cargos:
+            base["cargos"][r["CD_CARGO"]] = {
+                "vagas": int(r["QT_VAGA"]), "votos": {}, "siglas": {}, "grupo2022": {}, "nomeGrupo2022": {}, "eleitos": {},
+            }
+    if len(base["cargos"]) != len(cargos):
+        raise IOError(f"o TSE não informou as vagas de deputado de {uf} em 2022")
+
+    # Votos nominais de cada candidato no 1º turno (inclusive os anulados depois, como o site de resultados contava), somando as zonas eleitorais.
     votos_cand = {}
-    for cargo in cargos:
-        bruto = tse.arquivo(
-            URL_RESULTADO_2022.format(uf=uf.lower(), cargo=cargo), f"historico/resultado2022_{uf}_{cargo}.json",
-            TTL_HISTORICO,
-        )
-        res = json.loads(bruto.decode("utf-8"))
-        base["cargos"][str(cargo)] = {
-            "vagas": int(res["v"]), "votos": {}, "siglas": {}, "grupo2022": {}, "nomeGrupo2022": {}, "eleitos": {},
-        }
-        for c in res["cand"]:
-            votos_cand[c["sqcand"]] = (int(c.get("vap") or 0), c.get("st"))
+    for r in zipremoto.linhas_csv(URL_VOTOS_CAND_2022, f"votacao_candidato_munzona_2022_{uf}.csv"):
+        if r["CD_CARGO"] in base["cargos"] and r["NR_TURNO"] == "1":
+            sq = r["SQ_CANDIDATO"]
+            votos_cand[sq] = votos_cand.get(sq, 0) + int(r["QT_VOTOS_NOMINAIS"] or 0)
 
     zip_votos = tse.arquivo(URL_VOTOS_PARTIDO_2022, "historico/votacao_partido_munzona_2022.zip", TTL_HISTORICO)
     for row in _csv_do_zip(zip_votos, f"_{uf}.csv"):
@@ -145,7 +196,8 @@ def _montar_base(uf):
         nr = row["NR_PARTIDO"]
         if row["DS_SIT_TOT_TURNO"].startswith("ELEITO"):
             c["eleitos"][nr] = c["eleitos"].get(nr, 0) + 1
-        votos, situacao = votos_cand.get(row["SQ_CANDIDATO"], (0, None))
+        votos = votos_cand.get(row["SQ_CANDIDATO"], 0)
+        situacao = SITUACOES_2022.get(row["DS_SIT_TOT_TURNO"])
         titulo = row["NR_TITULO_ELEITORAL_CANDIDATO"]
         if titulo and situacao:
             base["candidatos"].setdefault(titulo, []).append({
@@ -159,13 +211,7 @@ def base(uf):
     with _lock:
         if uf in _bases:
             return _bases[uf]
-    arq = tse._cache_dir / "historico" / f"base2022_{uf}.json"
-    if arq.exists():
-        b = json.loads(arq.read_text(encoding="utf-8"))
-    else:
-        b = _montar_base(uf)
-        arq.parent.mkdir(parents=True, exist_ok=True)
-        arq.write_text(json.dumps(b, ensure_ascii=False), encoding="utf-8")
+    b = _guardado(f"base2022_{uf}.json", lambda: _montar_base(uf))
     with _lock:
         _bases[uf] = b
     return b
@@ -300,21 +346,14 @@ def _historico_candidato(b, titulo, cargo):
     return max(entradas, key=lambda e: (e["cargo"] == cargo, e["votos"]))
 
 
-def _financas(uf, cargo, candidatos):
-    """Dinheiro de cada candidato: do banco local de gastos (rápido) ou, se ele ainda não existir, da API do TSE."""
+def _financas(candidatos):
+    """Dinheiro de cada candidato, pelo banco local de gastos. Enquanto o banco é montado (só nos primeiros minutos
+    de um servidor novo), vale zero para todos e a ordem sai só pelos votos; a tela avisa que é provisória.
+    Pedir as contas ao TSE candidato a candidato levava minutos por estado e estourava o tempo do nginx."""
     locais = gastos.financas([c["id"] for c in candidatos])
     if locais is not None:
         return [locais[c["id"]] for c in candidatos]
-
-    def contas_de(c):
-        ct = tse.contas(uf, cargo, c["id"], str(c["numero"])[:2], c["numero"])
-        if not ct:
-            return {"arrecadado": 0, "publico": 0, "gastos": 0}
-        return {"arrecadado": ct["totalRecebido"], "publico": ct["fundoEleitoral"] + ct["fundoPartidario"],
-                "gastos": ct["despesasContratadas"]}
-
-    with ThreadPoolExecutor(max_workers=6) as pool:
-        return list(pool.map(contas_de, candidatos))
+    return [{"arrecadado": 0, "publico": 0, "gastos": 0} for _ in candidatos]
 
 
 def ranking(uf, cargo, grupo, proj=None, grupos=None):
@@ -326,7 +365,7 @@ def ranking(uf, cargo, grupo, proj=None, grupos=None):
     b = base(uf)
     mun = municipal(uf)
     candidatos = grupos[grupo]["candidatos"]
-    financas = _financas(uf, cargo, candidatos)
+    financas = _financas(candidatos)
 
     linhas = []
     for c, ct in zip(candidatos, financas):
@@ -389,4 +428,5 @@ def panorama_listas(uf, cargo):
         g["disputa"] = [resumo(c) for c in aptos if vagas and vagas < c["posicao"] <= vagas + faixa]
         g["maisFortes"] = [resumo(c) for c in aptos[:3]] if not vagas else []
         g["aptos"] = len(aptos)
+    proj["semDinheiro"] = not gastos._banco().exists()
     return proj

@@ -6,31 +6,61 @@ de MB; com requisições parciais (HTTP Range) baixamos só o CSV que interessa.
 import csv
 import io
 import struct
+import time
 import zlib
 
 from curl_cffi import requests
 
+TENTATIVAS = 4
+ESPERA_ENTRE_TENTATIVAS = 30
 
-def _faixa(url, inicio, fim):
-    r = requests.get(url, impersonate="chrome", timeout=300, headers={"Range": f"bytes={inicio}-{fim}"})
+
+class ArquivoMudou(IOError):
+    """O TSE publicou uma versão nova do ZIP entre a leitura do índice e a dos dados."""
+
+
+# O TSE refaz esses ZIPs várias vezes ao dia. Sem conferir a versão, o índice de uma e os bytes de outra se
+# misturam e a descompactação falha ("invalid block type"). Cada leitura guarda a versão (ETag) vista no índice
+# e manda If-Range: se o arquivo mudou, o servidor responde 200 em vez de 206 e lemos tudo de novo.
+def _cabecalhos(inicio, fim, versao):
+    cab = {"Range": f"bytes={inicio}-{fim}"}
+    if versao:
+        cab["If-Range"] = versao
+    return cab
+
+
+def _conferir(r):
+    if r.status_code == 200:
+        raise ArquivoMudou("o TSE publicou uma versão nova do arquivo durante a leitura")
     if r.status_code != 206:
         raise IOError(f"o servidor não aceitou leitura parcial ({r.status_code})")
+
+
+def _faixa(url, inicio, fim, versao=None):
+    r = requests.get(url, impersonate="chrome", timeout=300, headers=_cabecalhos(inicio, fim, versao))
+    _conferir(r)
     return r.content
 
 
 def listar(url):
     """Retorna {nome: (offset_cabecalho_local, tamanho_compactado, metodo)}."""
+    return _listar(url)[0]
+
+
+def _listar(url):
+    """Índice do ZIP e a versão do arquivo em que ele foi lido."""
     r = requests.get(url, impersonate="chrome", timeout=60, headers={"Range": "bytes=0-0"})
+    versao = r.headers.get("etag") or r.headers.get("last-modified")
     total = int(r.headers["content-range"].split("/")[-1])
-    fim = _faixa(url, max(0, total - 1_000_000), total - 1)
-    i = fim.rfind(b"PK\x05\x06")
+    fim = _faixa(url, max(0, total - 1_000_000), total - 1, versao)
+    i = fim.rfind(b"PK")
     tam_cd, off_cd = struct.unpack("<II", fim[i + 12:i + 20])
     if off_cd == 0xFFFFFFFF:
-        j = fim.rfind(b"PK\x06\x06")
+        j = fim.rfind(b"PK")
         tam_cd, off_cd = struct.unpack("<QQ", fim[j + 40:j + 56])
-    cd = _faixa(url, off_cd, off_cd + tam_cd - 1)
+    cd = _faixa(url, off_cd, off_cd + tam_cd - 1, versao)
     arquivos, p = {}, 0
-    while cd[p:p + 4] == b"PK\x01\x02":
+    while cd[p:p + 4] == b"PK":
         metodo = struct.unpack("<H", cd[p + 10:p + 12])[0]
         compactado = struct.unpack("<I", cd[p + 20:p + 24])[0]
         nl, el, cl = struct.unpack("<HHH", cd[p + 28:p + 34])
@@ -52,7 +82,26 @@ def listar(url):
             q += 4 + tam
         arquivos[nome] = (offset, compactado, metodo)
         p += 46 + nl + el + cl
-    return arquivos
+    return arquivos, versao
+
+
+def _abrir(sessao, url, nome):
+    """Resposta em fluxo com os bytes compactados de `nome`, todos da mesma versão do ZIP. Se o TSE trocar o
+    arquivo no meio, espera um pouco e recomeça: isso é percebido antes de qualquer linha ser lida."""
+    for tentativa in range(TENTATIVAS):
+        try:
+            arquivos, versao = _listar(url)
+            offset, compactado, metodo = arquivos[nome]
+            cab = _faixa(url, offset, offset + 29, versao)
+            nl, el = struct.unpack("<HH", cab[26:30])
+            inicio = offset + 30 + nl + el
+            r = sessao.get(url, stream=True, timeout=900, headers=_cabecalhos(inicio, inicio + compactado - 1, versao))
+            _conferir(r)
+            return r, metodo
+        except ArquivoMudou:
+            if tentativa == TENTATIVAS - 1:
+                raise
+            time.sleep(ESPERA_ENTRE_TENTATIVAS)
 
 
 class _Fluxo(io.RawIOBase):
@@ -85,14 +134,8 @@ class _Fluxo(io.RawIOBase):
 
 def linhas_csv(url, nome, encoding="latin-1"):
     """Lê um CSV (separado por ;) de dentro do ZIP remoto, linha a linha, sem gravar em disco."""
-    offset, compactado, metodo = listar(url)[nome]
-    cab = _faixa(url, offset, offset + 29)
-    nl, el = struct.unpack("<HH", cab[26:30])
-    inicio = offset + 30 + nl + el
     with requests.Session(impersonate="chrome") as s:
-        r = s.get(url, stream=True, timeout=900, headers={"Range": f"bytes={inicio}-{inicio + compactado - 1}"})
-        if r.status_code != 206:
-            raise IOError(f"o servidor não aceitou leitura parcial ({r.status_code})")
+        r, metodo = _abrir(s, url, nome)
         bruto = io.BufferedReader(_Fluxo(r.iter_content(chunk_size=1 << 20), zlib.decompressobj(-15) if metodo == 8 else None),
                                   buffer_size=1 << 20)
         yield from csv.DictReader(io.TextIOWrapper(bruto, encoding=encoding, newline=""), delimiter=";")
@@ -100,16 +143,10 @@ def linhas_csv(url, nome, encoding="latin-1"):
 
 def baixar_membro(url, nome, destino):
     """Grava em `destino` o conteúdo descompactado de `nome` dentro do ZIP remoto."""
-    offset, compactado, metodo = listar(url)[nome]
-    cab = _faixa(url, offset, offset + 29)
-    nl, el = struct.unpack("<HH", cab[26:30])
-    inicio = offset + 30 + nl + el
-    descompactar = zlib.decompressobj(-15) if metodo == 8 else None
     tmp = destino.with_suffix(destino.suffix + ".parcial")
     with requests.Session(impersonate="chrome") as s, open(tmp, "wb") as f:
-        r = s.get(url, stream=True, timeout=900, headers={"Range": f"bytes={inicio}-{inicio + compactado - 1}"})
-        if r.status_code != 206:
-            raise IOError(f"o servidor não aceitou leitura parcial ({r.status_code})")
+        r, metodo = _abrir(s, url, nome)
+        descompactar = zlib.decompressobj(-15) if metodo == 8 else None
         for bloco in r.iter_content(chunk_size=1 << 20):
             f.write(descompactar.decompress(bloco) if descompactar else bloco)
         if descompactar:

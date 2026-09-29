@@ -23,8 +23,11 @@ from concurrent.futures import ThreadPoolExecutor
 import alesp
 import analise
 import camara
+import empresas
 import gastos
 import historico
+import punicoes
+import sancoes
 import tse
 
 TTL = 12 * tse.HORA
@@ -129,7 +132,11 @@ def obter(uf, cargo):
     """Devolve os indicadores prontos; se não houver (ou estiverem velhos), dispara o cálculo em segundo plano."""
     arq = _arquivo(uf, cargo)
     dados = json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else None
-    velho = not arq.exists() or time.time() - arq.stat().st_mtime > TTL
+    # Também refaz quando uma base usada nos alertas ficou pronta ou foi atualizada depois do último cálculo
+    # (ex.: o índice de sócios da Receita, que no primeiro dia do servidor só fica pronto horas depois).
+    bases = [gastos._banco(), empresas._arquivo(), sancoes._arquivo(), punicoes._arquivo()]
+    base_mais_nova = max((b.stat().st_mtime for b in bases if b.exists()), default=0)
+    velho = not arq.exists() or time.time() - arq.stat().st_mtime > TTL or arq.stat().st_mtime < base_mais_nova
     chave = (uf, cargo)
     if velho and gastos._banco().exists():
         with _lock:
