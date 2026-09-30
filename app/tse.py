@@ -229,8 +229,21 @@ def _ficha_limpa(d, ufc):
         "historico": historico,
         "vices": vices,
         "atualizadoEm": d.get("dataUltimaAtualizacao"),
-        "linkTse": f"https://divulgacandcontas.tse.jus.br/divulga/#/candidato/{ANO}/{ELEICAO}/{ufc}/{d['id']}",
+        "linkTse": link_tse(ufc, d["id"]),
     }
+
+
+REGIOES = {**{uf: "NORTE" for uf in ("AC", "AP", "AM", "PA", "RO", "RR", "TO")},
+           **{uf: "NORDESTE" for uf in ("AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE")},
+           **{uf: "CENTROOESTE" for uf in ("DF", "GO", "MT", "MS")},
+           **{uf: "SUDESTE" for uf in ("ES", "MG", "RJ", "SP")},
+           **{uf: "SUL" for uf in ("PR", "RS", "SC")}, "BR": "BRASIL"}
+
+
+def link_tse(uf, id_candidato):
+    """Página do candidato no DivulgaCandContas (o TSE mudou o formato em 2026: região, UF, eleição, id, ano, UE)."""
+    return (f"https://divulgacandcontas.tse.jus.br/divulga/#/candidato/{REGIOES.get(uf, 'BRASIL')}/{uf}/{ELEICAO}/"
+            f"{id_candidato}/{ANO}/{uf}")
 
 
 def _contas_limpas(c):

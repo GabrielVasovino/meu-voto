@@ -16,7 +16,7 @@ from curl_cffi import requests
 
 import alesp
 import camara
-import contas2022
+import contas_anteriores
 import emendas
 import empresas
 import gabinetes
@@ -630,31 +630,38 @@ def _sinais_improbidade(id_candidato):
 DOACAO_ALTA_ASSESSOR = 10_000
 
 
-def _sinais_2022(id_candidato):
-    """A campanha de 2022 da mesma pessoa, num aviso só. Cada tipo de problema tira 10 pontos, no máximo 20."""
-    c = contas2022.do_candidato(id_candidato)
-    if not c:
+def _sinais_anteriores(id_candidato):
+    """As campanhas de 2014, 2018 e 2022 da mesma pessoa, num aviso só. Cada problema encontrado (tipo e ano) tira
+    10 pontos, no máximo 20 somando tudo."""
+    anos = contas_anteriores.do_candidato(id_candidato)
+    if not anos:
         return []
-    frases, pontos = [], 0
-    if c["doouRecebeu"]:
-        pontos += 10
-        lista = c["doouRecebeu"]
-        frases.append("Doaram R$ 5 mil ou mais e receberam da campanha mais do que doaram: " + "; ".join(
-            f"{x['nome']} doou {_brl0(x['doou'])} e recebeu {_brl0(x['recebeu'])}" for x in lista[:3])
-            + (f"; e mais {len(lista) - 3}" if len(lista) > 3 else "") + ".")
-    if c["empresaPropria"]:
-        pontos += 10
-        frases.append("A campanha pagou empresa do próprio candidato: "
-                      + _lista_valores([(x["nome"], x["valor"]) for x in c["empresaPropria"]]) + ".")
-    if c["assessores"]:
-        if max(x["valor"] for x in c["assessores"]) >= DOACAO_ALTA_ASSESSOR:
+    partes, pontos = [], 0
+    for ano in sorted(anos, reverse=True):
+        c = anos[ano]
+        frases = []
+        if c["doouRecebeu"]:
             pontos += 10
-        frases.append("Pessoas que trabalham ou trabalharam no gabinete doaram: " + _lista_valores([(x["nome"], x["valor"]) for x in c["assessores"]]) + ".")
+            lista = c["doouRecebeu"]
+            frases.append("doaram R$ 5 mil ou mais e receberam da campanha mais do que doaram: " + "; ".join(
+                f"{x['nome']} doou {_brl0(x['doou'])} e recebeu {_brl0(x['recebeu'])}" for x in lista[:3])
+                + (f"; e mais {len(lista) - 3}" if len(lista) > 3 else ""))
+        if c["empresaPropria"]:
+            pontos += 10
+            frases.append("a campanha pagou empresa do próprio candidato: "
+                          + _lista_valores([(x["nome"], x["valor"]) for x in c["empresaPropria"]]))
+        if c["assessores"]:
+            if max(x["valor"] for x in c["assessores"]) >= DOACAO_ALTA_ASSESSOR:
+                pontos += 10
+            frases.append("pessoas que trabalham ou trabalharam no gabinete doaram: "
+                          + _lista_valores([(x["nome"], x["valor"]) for x in c["assessores"]]))
+        cargo = (c.get("cargo") or "").lower()
+        partes.append(f"Em {ano}, disputou{' para ' + cargo if cargo else ''}{' em ' + c['uf'] if c.get('uf') else ''}: "
+                      + "; ".join(frases) + ".")
     pontos = min(pontos, 20)
-    return [_sinal("atencao" if pontos else "info", "Na campanha de 2022",
-                   f"Em 2022, disputou para {c['cargo'].lower()} em {c['uf']}. " + " ".join(frases)
-                   + ("" if pontos else " Nada disso tira pontos."),
-                   "TSE (prestação de contas de 2022)", categoria="2022", pontos=pontos or None)]
+    return [_sinal("atencao" if pontos else "info", "Nas campanhas anteriores",
+                   " ".join(partes) + ("" if pontos else " Nada disso tira pontos."),
+                   "TSE (prestação de contas de 2014, 2018 e 2022)", categoria="anteriores", pontos=pontos or None)]
 
 
 def _sinais_gabinete(id_candidato):
@@ -1262,7 +1269,7 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_emenda_campanha(dep, analise_gastos)
     sinais += _sinais_gabinete(id_candidato)
     sinais += _sinais_improbidade(id_candidato)
-    sinais += _sinais_2022(id_candidato)
+    sinais += _sinais_anteriores(id_candidato)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)

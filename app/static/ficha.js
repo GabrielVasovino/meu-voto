@@ -860,7 +860,7 @@ function painelPolitica() {
   }
   const intro = `<p class="painel-intro">${d ? "Como vota e o que produziu no mandato de deputado federal" : "Como o partido desta candidatura se posiciona na Câmara"}, com dados da Câmara dos Deputados desde fevereiro de 2023.</p>`;
   const plano = o.planoDeGoverno
-    ? secao("Plano de governo", `<p>A candidatura registrou um plano de governo no TSE. Ele está na <a href="${esc(ficha.f.linkTse)}" target="_blank" rel="noopener">página oficial</a>, junto dos outros arquivos.</p>`,
+    ? secao("Plano de governo", `<p>A candidatura registrou um plano de governo no TSE. Para ler, abra a <a href="${esc(ficha.f.linkTse)}" target="_blank" rel="noopener">página oficial da candidatura</a> e clique em "Propostas".</p>`,
       leitura("neutro", "É o documento com as propostas oficiais da candidatura e a melhor fonte para saber o que ela promete fazer."))
     : "";
   if (!d) return intro + avisoBancada(o) + posicoesPartido(o) + plano;
