@@ -1649,3 +1649,10 @@ table.lista.tabela-fornecedores th:first-child, table.lista.tabela-fornecedores 
 table.lista.tabela-fornecedores th.num, table.lista.tabela-fornecedores td.num { padding-right: 28px; }
 table.lista.tabela-fornecedores td:nth-child(3) { min-width: 9em; }
 .maj-afin > .sem-afinidade { text-align: right; }
+
+/* "Ver os outros N": o mesmo botãozinho no resultado do questionário (listas, candidatos e partidos). */
+.ver-outros > summary { list-style: none; width: fit-content; }
+.ver-outros > summary::-webkit-details-marker { display: none; }
+.ver-outros > summary .aberto, .ver-outros[open] > summary .fechado { display: none; }
+.ver-outros[open] > summary .aberto { display: inline; }
+.res-podio-mais { grid-column: 1 / -1; }

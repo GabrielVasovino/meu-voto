@@ -294,9 +294,8 @@ function desenharResultado() {
         <h4>Partido por partido</h4>
         <p class="explica">Cada partido sozinho, pela maioria da própria bancada na Câmara. Partidos sem deputados federais não aparecem porque não têm votos para comparar.</p>
       </div>
-      <div class="partidos-grade">${rankingPartidos.slice(0, 8).map(cartaoPartido).join("")}</div>
-      ${rankingPartidos.length > 8 ? `<details class="res-mais"><summary>Ver os outros ${rankingPartidos.length - 8} partidos</summary>
-        <div class="partidos-grade">${rankingPartidos.slice(8).map(cartaoPartido).join("")}</div></details>` : ""}
+      <div class="partidos-grade">${rankingPartidos.slice(0, 5).map(cartaoPartido).join("")}</div>
+      ${verOutros(rankingPartidos.length - 5, ["o outro partido", "os outros N partidos"], `<div class="partidos-grade">${rankingPartidos.slice(5).map(cartaoPartido).join("")}</div>`)}
     </section>` : ""}
 
     <div class="callout res-seguir">
@@ -309,6 +308,12 @@ function desenharResultado() {
   </div>`;
   preencherListasResultado();
   preencherCargosResultado();
+}
+
+// "Ver os outros N ...": o mesmo botãozinho em todo o resultado (listas, candidatos e partidos).
+function verOutros(n, [um, varios], html) {
+  if (n <= 0) return "";
+  return `<details class="ver-outros"><summary class="link-btn res-ver-todos"><span class="fechado">Ver ${n === 1 ? um : varios.replace("N", n)}</span><span class="aberto">Mostrar só os primeiros</span></summary>${html}</details>`;
 }
 
 // Cartão pequeno de um partido: sigla, porcentagem e uma barra fina.
@@ -450,29 +455,8 @@ async function preencherListasResultado() {
       <div class="trilho"><span class="cheio" style="width:${pcx}%"></span></div>
       <p class="res-vagas">${vagas}</p>
     </article>`;
-  }).join("") + `<details class="res-todos cartao"><summary>Ver todas as listas (${com.length})</summary>
-      <div class="afinidade">${htmlLinhasRanking(com, false)}</div>
-      ${sem.length ? `<p class="nota-pequena">Sem bancada na Câmara para comparar: ${listaNatural(sem)}.</p>` : ""}
-    </details>` + (top.length ? `<details class="res-todos cartao"><summary>Comparar votação por votação</summary>${htmlVotacaoPorVotacao(top.map((i) => i.g))}</details>` : "");
-}
-
-// Tabela: cada votação respondida numa linha, a sua resposta e como cada lista do pódio votou.
-function htmlVotacaoPorVotacao(grupos) {
-  const celula = (q, g) => {
-    const voto = votoDoBloco(q, g.partidos);
-    if (!voto) return `<td class="neutro" title="Sem maioria clara">–</td>`;
-    const igual = (estado.quiz[q.id] === 1) === (voto === "Sim");
-    return `<td class="${igual ? "igual" : "diferente"}"><span class="res-marca">${igual ? "✓" : "✕"}</span> ${voto}</td>`;
-  };
-  const linhas = quizDados.perguntas.filter((q) => estado.quiz[q.id]).map((q) => `<tr>
-    <td class="res-afirm"><small>${esc(q.tema)}</small>${esc(q.afirmacao)}</td>
-    <td class="res-voce">${estado.quiz[q.id] === 1 ? "Sim" : "Não"}</td>
-    ${grupos.map((g) => celula(q, g)).join("")}
-  </tr>`).join("");
-  return `<p class="explica">Tudo aparece como voto na Câmara: responder Concordo equivale a votar Sim, e Discordo, a votar Não. O ✓ marca quando a maioria da lista votou igual a você.</p>
-    <div class="tabela-rolagem"><table class="lista res-tabela">
-      <thead><tr><th>Votação</th><th>Você</th>${grupos.map((g) => `<th>${esc(agremiacao(g.id))}</th>`).join("")}</tr></thead>
-      <tbody>${linhas}</tbody></table></div>`;
+  }).join("") + `<div class="res-podio-mais">${verOutros(com.length - 3, ["a outra lista", "as outras N listas"], `<div class="cartao res-cargo-painel"><div class="afinidade">${htmlLinhasRanking(com.slice(3), false)}</div>
+      ${sem.length ? `<p class="nota-pequena">Sem bancada na Câmara para comparar: ${listaNatural(sem)}.</p>` : ""}</div>`)}</div>`;
 }
 
 // ---------- ações ----------
