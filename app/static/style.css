@@ -1636,3 +1636,8 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
 /* ---------- guia: por que o site existe ---------- */
 .guia-destaque { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin: 12px 0; }
 .guia-destaque p:last-child { margin-bottom: 0; }
+
+/* Nota geral e afinidade uma embaixo da outra: barras do mesmo tamanho e números na mesma coluna. */
+.maj-afin > .afin-mini { flex: none; width: 210px; min-width: 0; }
+.maj-afin > .afin-mini b { flex: none; width: 7.2em; text-align: right; white-space: nowrap; }
+@media (max-width: 400px) { .maj-afin > .afin-mini { width: 170px; } .maj-afin > .afin-mini b { width: 6.6em; } }
