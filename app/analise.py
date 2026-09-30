@@ -372,6 +372,7 @@ def _sinais_gastos(g):
         return []
     s = [_sinal(x["nivel"], x["titulo"], x["detalhe"], "prestação de contas ao TSE", cnpj=x.get("cnpj"))
          for x in g["sinais"] if x["nivel"] in ("alerta", "atencao")]
+    contados = set()  # a mesma pessoa, sócia de duas empresas contratadas, só conta uma vez
     for f in g["fornecedores"]:
         pesa = relevante(f["valor"], g.get("total"))
         for x in f["sinais"]:
@@ -382,6 +383,12 @@ def _sinais_gastos(g):
             if not pesa and x["titulo"] != "Empresa do próprio candidato":
                 nivel = "info"
                 detalhe += " Como o valor é pequeno perto do total da campanha, não tira pontos."
+            chave = (x["titulo"], x.get("pessoa"))
+            if x.get("pessoa") and nivel != "info":
+                if chave in contados:
+                    nivel = "info"
+                    detalhe += " A mesma pessoa já aparece em outro aviso, que é o que tira pontos."
+                contados.add(chave)
             s.append(_sinal(nivel, f"{x['titulo']}: {f['nome']}", detalhe, "TSE e Receita Federal", cnpj=f["cnpj"]))
     return s
 

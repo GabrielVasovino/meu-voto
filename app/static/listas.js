@@ -397,50 +397,30 @@ async function abrirLista(idGrupo, manter = false) {
   carregarRedeLista(idGrupo, item);
 }
 
-// "Eleito por QP" -> "foi eleito", e assim por diante.
-function resultado2022(situacao) {
-  const s = (situacao || "").toLowerCase();
-  if (s.startsWith("eleito")) return "foi eleito";
-  if (s.startsWith("suplente")) return "ficou como suplente";
-  return "não se elegeu";
-}
-
 function linhaCandidato(c, g, item) {
   const voto = estado.votos[item.slot];
   const naCedula = voto && voto.id === c.id;
-  const hist = [
-    c.votos2022 ? `Teve ${numero.format(c.votos2022)} votos para deputado em 2022 e ${resultado2022(c.situacao2022)}`
-      : "Não disputou para deputado em 2022",
-    c.votosMunicipais ? `em 2024, teve ${numero.format(c.votosMunicipais)} votos para ${c.cargoMunicipal.toLowerCase()} em ${c.municipio}${c.eleitoMunicipal ? " e se elegeu" : ""}` : "",
-  ].filter(Boolean).join("; ");
+  const p = indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id]?.pessoas?.[String(c.id)] : null;
+  const af = afinidadePessoa(c.id);
   const acao = !c.apto ? "" : naCedula
     ? `<button type="button" class="btn pequeno" data-lista-retirar="${c.id}">Retirar da cédula</button>`
     : `<button type="button" class="btn pequeno primario" data-lista-cedula="${c.id}">Pôr na cédula</button>`;
+  // Três selos iguais, lado a lado: afinidade (só de quem já é deputado federal), nota geral (de quem entraria) e força.
+  const selos = [
+    af ? `<span class="selo" title="${esc(textoAfinidadePessoa(c.id))}">Afinidade <strong>${pctAfinidade(af)}%</strong></span>` : "",
+    p?.nota != null ? `<span class="selo selo-${nivelNota(p.nota)}" title="${esc(`${EXPLICA_NOTA_GERAL}${p.titulos.length ? ` Pontos de atenção: ${p.titulos.join("; ")}.` : ""}`)}">Nota <strong>${p.nota}</strong></span>` : "",
+    c.forca != null ? `<span class="selo" title="Junta a maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e o dinheiro arrecadado em 2026. É o que define a ordem da lista.">Força <strong>${Math.round(c.forca)}</strong></span>` : "",
+  ].join("");
   return `<li class="cand-linha${naCedula ? " meu" : ""}">
     <span class="cand-pos">${c.posicao ?? "—"}</span>
-    ${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto cand-linha-foto")}
+    ${fotoHtml(estado.uf, c.id, c.nomeUrna, `foto cand-linha-foto${p?.nota != null ? ` anel-${nivelNota(p.nota)}` : ""}`)}
     <div class="cand-linha-info">
       <button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>
       <span class="cand-linha-meta">Número ${esc(c.numero)}, ${esc(c.partido)}${c.apto ? "" : `. ${esc(c.situacao)}`}</span>
-      <span class="cand-linha-meta">${hist}. Arrecadou ${c.arrecadado ? brlCompacto.format(c.arrecadado) : "R$ 0"} até agora.</span>
-      ${textoAfinidadePessoa(c.id) ? `<span class="cand-linha-afin">${textoAfinidadePessoa(c.id)}.</span>` : ""}
-      ${htmlAvisosPessoa(g, c.id)}
+      ${selos ? `<span class="selos">${selos}</span>` : ""}
     </div>
-    ${c.forca != null ? `<span class="forca" title="Junta a maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e o dinheiro arrecadado em 2026. É o que define a ordem da lista.">Força <strong>${Math.round(c.forca)}</strong></span>` : ""}
     <div class="cand-linha-acoes">${acao}</div>
   </li>`;
-}
-
-// Nota e avisos de uma pessoa (existem para quem ocuparia as vagas, que é o grupo avaliado).
-function htmlAvisosPessoa(g, id) {
-  const p = indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id]?.pessoas?.[String(id)] : null;
-  if (!p) return "";
-  const nivel = { serio: "bad", conferir: "warn", ok: "ok" }[nivelAnel(p.alertas, p.atencoes, p.integridade)];
-  const rotulo = p.alertas ? `${p.alertas} ${p.alertas === 1 ? "alerta sério" : "alertas sérios"}`
-    : p.atencoes ? `${p.atencoes} ${p.atencoes === 1 ? "ponto" : "pontos"} para conferir` : "Nada para conferir";
-  const desempenho = p.desempenho != null ? `, desempenho ${p.desempenho}` : "";
-  return `<span class="cand-linha-avisos"><span class="badge ${nivel}">${rotulo}</span>
-    <small>Nota geral ${p.nota ?? "—"} (integridade ${p.integridade ?? "—"}${desempenho})${p.titulos.length ? `: ${esc(p.titulos.join("; "))}` : ""}</small></span>`;
 }
 
 // Primeira coisa da janela: quem ocuparia as vagas e onde o voto pesa mais.

@@ -408,8 +408,8 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
     """Indícios sobre um fornecedor. `candidato` = registro do candidato que está sendo analisado."""
     s = []
 
-    def add(nivel, titulo, detalhe, cnpj=None):
-        s.append({"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "cnpj": cnpj})
+    def add(nivel, titulo, detalhe, cnpj=None, pessoa=None):
+        s.append({"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "cnpj": cnpj, "pessoa": pessoa})
 
     if receita:
         if receita.get("situacao") and receita["situacao"].upper() != "ATIVA":
@@ -446,9 +446,17 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
                 if n == nome_cand:
                     add("alerta", "Empresa do próprio candidato", f"{socio['nome']} aparece entre os sócios da empresa.")
                 elif n in doadores:
-                    add("atencao", "Sócio de empresa contratada também doou para a campanha",
-                        f"{socio['nome']} é sócio de uma empresa que a campanha contratou e também doou dinheiro para ela. "
-                        "Pode ser só apoio, mas também é um jeito de o dinheiro doado voltar para quem doou, pela empresa.")
+                    # Mesma régua do "doador recebeu mais do que doou": só pesa se a doação foi de R$ 5 mil ou mais e a
+                    # empresa recebeu mais do que a pessoa doou. Uma doação pequena de um sócio é só apoio.
+                    doou = doadores[n]
+                    recebeu = valor if valor is not None else 0
+                    pesa = doou >= DOOU_MINIMO and recebeu > doou
+                    add("atencao" if pesa else "info", "Sócio de empresa contratada também doou para a campanha",
+                        f"{socio['nome']} é sócio de uma empresa que a campanha contratou e também doou R$ {_milhar(doou)} "
+                        "para ela. " + ("Como a empresa recebeu mais do que isso, é um jeito de o dinheiro doado voltar "
+                                        "para quem doou." if pesa else
+                                        "Como a doação é pequena ou menor do que a empresa recebeu, não tira pontos."),
+                        pessoa=n)
                 elif n in candidato.get("pagosPf", ()):
                     add("atencao", "Sócio de empresa contratada também recebeu da campanha",
                         f"{socio['nome']} é sócio de uma empresa que a campanha contratou e, além disso, recebeu dinheiro "
@@ -604,8 +612,10 @@ def analisar_candidato(sq_candidato, ficha_nome=None, max_receita=15, nome_urna=
         total_pj = sum(f["valor"] for f in pj.values())
         ordenados = sorted(pj.items(), key=lambda kv: -kv[1]["valor"])
 
-        doadores = {_norm(n) for (n,) in c.execute(
-            "SELECT DISTINCT nome FROM receitas WHERE sq_candidato = ? AND length(doc) = 11", (sq_candidato,))}
+        doadores = {}
+        for n, v in c.execute(f"SELECT nome, sum(valor) FROM receitas WHERE sq_candidato = ? AND {_DOACAO_PF} GROUP BY nome",
+                              (sq_candidato,)):
+            doadores[_norm(n)] = doadores.get(_norm(n), 0) + (v or 0)
         sobrenomes, nomes_cand = _indices_nomes(c)
         nome_ref = {"nome": ficha_nome or cand["nome"], "pagosPf": {_norm(d["nome"]) for d in pf if d["nome"]}}
 

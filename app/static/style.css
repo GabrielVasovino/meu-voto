@@ -679,8 +679,12 @@ details.metodo li { margin: 4px 0; }
 .chance.muito-baixa { background: transparent; color: var(--text-3); box-shadow: inset 0 0 0 1px var(--border); }
 .chance.problema { background: var(--bad-soft); color: var(--bad); }
 
-.forca { justify-self: end; align-self: center; white-space: nowrap; font-size: .78rem; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: help; }
-.forca strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.selos { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.selo { white-space: nowrap; font-size: .78rem; color: var(--text-2); background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; cursor: help; }
+.selo strong { color: var(--text); font-variant-numeric: tabular-nums; }
+.selo-ok strong { color: var(--ok); }
+.selo-conferir strong { color: var(--warn); }
+.selo-serio strong { color: var(--bad); }
 
 table.lista .quem { font-weight: 600; }
 table.lista .quem small { display: block; font-weight: 400; color: var(--text-3); }
@@ -1000,7 +1004,7 @@ dialog.lista-dlg[open] { display: flex; flex-direction: column; }
 .faixa-lista summary small { flex-basis: 100%; color: var(--text-3); font-size: .8rem; }
 .cand-linhas { list-style: none; margin: 0; padding: 0 8px 8px; display: grid; gap: 4px; }
 .cand-linha {
-  display: grid; grid-template-columns: 2em 40px minmax(0, 1fr) 120px auto; gap: 10px; align-items: center;
+  display: grid; grid-template-columns: 2em 40px minmax(0, 1fr) auto; gap: 10px; align-items: center;
   padding: 8px; border-radius: 10px;
 }
 .cand-linha:hover { background: var(--surface-2); }
@@ -1017,7 +1021,7 @@ dialog.lista-dlg[open] { display: flex; flex-direction: column; }
   .listas-grade { grid-template-columns: minmax(0, 1fr); }
   dialog.lista-dlg { width: 100vw; height: 100dvh; border-radius: 0; border: 0; }
   .cand-linha { grid-template-columns: 1.6em 36px minmax(0, 1fr); }
-  .cand-linha .forca, .cand-linha-acoes { grid-column: 3; }
+  .cand-linha-acoes { grid-column: 3; }
   .cand-linha-acoes { justify-content: flex-start; }
 }
 
@@ -1641,7 +1645,6 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
 .maj-afin > .afin-mini { width: 100%; min-width: 0; }
 .maj-afin > .afin-mini .trilho { min-width: 24px; }
 .maj-afin > .afin-mini b { flex: none; width: 7.2em; text-align: right; white-space: nowrap; }
-@media (max-width: 760px) { .forca { justify-self: start; } }
 
 /* Tabela de fornecedores da ficha: respiro entre as colunas, principalmente entre "Recebeu" e "Experiência". */
 table.lista.tabela-fornecedores th, table.lista.tabela-fornecedores td { padding-left: 12px; padding-right: 12px; }

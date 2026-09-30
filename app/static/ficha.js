@@ -122,6 +122,17 @@ function desenharPainel() {
 
 // ---------- cabeçalho e navegação ----------
 
+// Afinidade com o questionário, no topo da ficha: a da própria pessoa quando ela já é deputada federal (votou
+// nessas votações); senão, a do partido ou da federação.
+function seloAfinidadeFicha(f) {
+  if (respostasQuiz() < 3) return "";
+  const propria = afinidadePessoa(f.id);
+  const x = propria || afinidadePartidos(blocoDoPartido(f.partido.sigla));
+  if (!x) return "";
+  const de = propria ? "votou como você" : `${blocoDoPartido(f.partido.sigla).length > 1 ? "a federação" : "o partido"} votou como você`;
+  return `<div class="selos"><span class="selo" title="${pctAfinidade(x)}% de afinidade: ${de} em ${x.a} de ${x.n} votações do questionário">Afinidade${propria ? "" : ` ${blocoDoPartido(f.partido.sigla).length > 1 ? "da federação" : "do partido"}`} <strong>${pctAfinidade(x)}%</strong></span></div>`;
+}
+
 function htmlCabecalho(f) {
   const chave = chaveDoVoto(f.id);
   const agrem = f.coligacao && f.coligacao !== f.partido.sigla ? agremiacao(f.coligacao) : "";
@@ -137,6 +148,7 @@ function htmlCabecalho(f) {
       <h2 id="ficha-nome">${esc(nomeProprio(f.nomeUrna))} <span class="ficha-num">${esc(f.numero)}</span></h2>
       <div class="ficha-sub">Candidato a ${esc(f.cargo.toLowerCase())} ${f.uf === "BR" ? "" : `por ${esc(f.uf)} `}pelo ${esc(f.partido.sigla)}${agrem ? `, na ${esc(agrem)}` : ""}</div>
       <div class="cand-badges">${badgeSituacao(f.situacao)}${f.reeleicao ? `<span class="badge info">Tenta a reeleição</span>` : ""}</div>
+      ${seloAfinidadeFicha(f)}
     </div>
     <div class="ficha-acoes">${acao}<button type="button" class="fechar" data-fechar aria-label="Fechar">✕</button></div>`;
 }
