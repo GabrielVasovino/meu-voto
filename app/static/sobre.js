@@ -86,6 +86,10 @@ function htmlSobreMetodologia() {
     <p>Para quem já tem mandato, o site cruza quem trabalha ou trabalhou no gabinete (Senado, Câmara e as assembleias de SP, RJ, PR e SC publicam essas listas; as outras assembleias ainda não publicam de um jeito que dê para ler) com quem doou para a campanha ou foi pago por ela, pelo nome completo e só dentro da campanha do próprio chefe. Assessor doar para o chefe é permitido e comum: metade dessas doações é de até R$ 3 mil. O aviso só tira pontos (10) quando um assessor doou mais de R$ 10 mil, mais do que um mês de salário da maioria deles, porque devolver parte do salário ao político (a "rachadinha") é crime. Assessor pago pela campanha só informa.</p>
     <h3>Condenações por improbidade</h3>
     <p>O Conselho Nacional de Justiça mantém o cadastro de condenados por improbidade administrativa, que só inclui decisões definitivas ou de tribunal. O site consulta o cadastro pelo CPF de cada candidato. Uma condenação é alerta sério (50 pontos), e a ficha mostra o processo, o tribunal, a data e as penas.</p>
+    <h3>Dívida ativa com a União</h3>
+    <p>A Procuradoria-Geral da Fazenda Nacional publica todo trimestre quem deve à União (impostos, INSS e FGTS) em dívida ativa. O site liga essas dívidas ao candidato pelo nome e por parte do CPF, e às empresas em que ele é sócio pelo CNPJ. Só a dívida em cobrança pesa: tira 10 pontos a partir de R$ 100 mil no nome do candidato e 20 a partir de R$ 1 milhão; empresas do candidato com R$ 1 milhão ou mais em cobrança tiram 10. Dívida parcelada, garantida ou suspensa pela Justiça aparece, mas não tira pontos.</p>
+    <h3>Contratos com o governo federal</h3>
+    <p>Quando uma empresa do candidato tem contrato com órgãos federais (Portal da Transparência, desde 2023), a ficha mostra. Vender para o governo é permitido, então só informa: é conflito de interesse que vale conhecer.</p>
     <h3>Campanhas anteriores</h3>
     <p>Para quem também disputou em 2014, 2018 ou 2022, os mesmos cruzamentos são feitos com as contas dessas campanhas e aparecem juntos num aviso só, "Nas campanhas anteriores": doador que recebeu mais do que doou, empresa do próprio candidato paga pela campanha e doação de quem trabalha ou trabalhou no gabinete. Cada problema encontrado (por tipo e por ano) tira 10 pontos, no máximo 20 somando tudo. A pessoa é ligada entre as eleições pelo CPF.</p>
     <h3>Desempenho no mandato</h3>
@@ -133,6 +137,7 @@ function htmlSobreDados() {
       <li><strong>Receita Federal:</strong> cadastro das empresas e sócios, para saber de quem são os fornecedores e em que empresas cada candidato é sócio.</li>
       <li><strong>CGU e Portal da Transparência:</strong> cadastros de empresas e pessoas punidas (CEIS, CNEP e CEAF) e emendas parlamentares.</li>
       <li><strong>Senado, Câmara e assembleias de SP, RJ, PR e SC:</strong> quem trabalha ou trabalhou nos gabinetes.</li>
+      <li><strong>PGFN:</strong> dívida ativa com a União.</li>
       <li><strong>CNJ:</strong> cadastro nacional de condenações por improbidade administrativa.</li>
       <li><strong>TCU, Ministério do Trabalho e Ibama:</strong> contas julgadas irregulares, lista suja do trabalho escravo e áreas embargadas.</li>
       <li><strong>Banco Central:</strong> inflação (IPCA), para comparar patrimônios de anos diferentes.</li>

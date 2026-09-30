@@ -17,6 +17,8 @@ from curl_cffi import requests
 import alesp
 import camara
 import contas_anteriores
+import contratos
+import pgfn
 import emendas
 import empresas
 import gabinetes
@@ -628,6 +630,67 @@ def _sinais_improbidade(id_candidato):
 
 
 DOACAO_ALTA_ASSESSOR = 10_000
+
+
+DIVIDA_PROPRIA = ((1_000_000, 20), (100_000, 10))
+DIVIDA_EMPRESAS = 1_000_000
+
+
+def _texto_divida(d):
+    s = d.get("porSituacao") or {}
+    cob = s.get("cobranca", 0)
+    outras = [f"{_brl0(v)} {rot}" for k, rot in (("negociada", "parcelados ou negociados"), ("garantia", "com garantia"),
+                                                  ("suspensa", "suspensos por decisão judicial")) if (v := s.get(k))]
+    tipos = listar(sorted(d.get("porTipo") or {}))
+    return (f"{_brl0(cob)} em cobrança" + (f" (e mais {listar(outras)})" if outras else "") + f", em dívidas de {tipos}")
+
+
+def _sinais_divida(id_candidato):
+    """Dívida ativa com a União (PGFN): do candidato e das empresas em que é sócio. Só a dívida em cobrança pesa;
+    parcelada, garantida ou suspensa pela Justiça aparece, mas não tira pontos."""
+    d = pgfn.do_candidato(id_candidato)
+    if not d:
+        return []
+    s = []
+    p = d.get("proprio")
+    if p and p.get("total"):
+        cob = (p.get("porSituacao") or {}).get("cobranca", 0)
+        pontos = next((pt for lim, pt in DIVIDA_PROPRIA if cob >= lim), 0)
+        s.append(_sinal("atencao" if pontos else "info", "Tem dívida ativa com a União",
+                        f"A Procuradoria da Fazenda Nacional registra no nome do candidato {_texto_divida(p)}."
+                        + ("" if pontos else " Como o valor em cobrança é menor que R$ 100 mil, não tira pontos."),
+                        f"PGFN, dados abertos da dívida ativa ({pgfn.referencia()})", categoria="divida", pontos=pontos or None))
+    emp = [e for e in d.get("empresas") or [] if e.get("total")]
+    if emp:
+        cob = sum((e.get("porSituacao") or {}).get("cobranca", 0) for e in emp)
+        pesa = cob >= DIVIDA_EMPRESAS
+        partes = "; ".join(f"{e['nome'].title()}: {_texto_divida(e)}" for e in emp[:4]) + (f"; e mais {len(emp) - 4}" if len(emp) > 4 else "")
+        s.append(_sinal("atencao" if pesa else "info", "Empresa do candidato tem dívida ativa com a União",
+                        f"{partes}." + ("" if pesa else " Como a soma em cobrança é menor que R$ 1 milhão, não tira pontos."),
+                        f"PGFN, dados abertos da dívida ativa ({pgfn.referencia()}), e Receita Federal", categoria="divida",
+                        pontos=10 if pesa else None))
+    return s
+
+
+def _sinais_contratos(id_candidato):
+    """Empresas do candidato com contrato federal. Só informação: vender para o governo não é irregular, mas é
+    conflito de interesse para quem vai ter mandato."""
+    achados = []
+    for e in empresas.do_candidato(id_candidato) or []:
+        c = contratos.da_empresa(e["basico"])
+        if c:
+            achados.append((e.get("razao") or e["basico"], c))
+    if not achados:
+        return []
+    partes = []
+    for nome, c in sorted(achados, key=lambda x: -x[1]["total"]):
+        maiores = "; ".join(f"{x['orgao'].title()}, {_brl0(x['valor'])}" for x in c["contratos"][:2])
+        partes.append(f"{nome.title()}: {c['quantos']} {'contrato' if c['quantos'] == 1 else 'contratos'}, "
+                      f"{_brl0(c['total'])} ao todo ({maiores})")
+    return [_sinal("info", "Empresa do candidato tem contratos com o governo federal",
+                   f"De {contratos.periodo()}: " + ". ".join(partes) + ". Vender para o governo é permitido, mas quem "
+                   "ocupa cargo público e é sócio de empresa que depende de contratos públicos tem conflito de interesse.",
+                   "Portal da Transparência (compras do governo federal) e Receita Federal", categoria="empresas")]
 
 
 def _sinais_anteriores(id_candidato):
@@ -1276,6 +1339,8 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_gabinete(id_candidato)
     sinais += _sinais_improbidade(id_candidato)
     sinais += _sinais_anteriores(id_candidato)
+    sinais += _sinais_contratos(id_candidato)
+    sinais += _sinais_divida(id_candidato)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)
