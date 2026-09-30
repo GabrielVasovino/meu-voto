@@ -32,7 +32,7 @@ import tse
 
 TTL = 12 * tse.HORA
 # Muda quando a regra da nota muda, para o cálculo guardado ser refeito na hora.
-CALCULO = 12
+CALCULO = 13
 
 _estado = {}  # (uf, cargo) -> {"etapa", "feitos", "total"}
 _rodando = set()
@@ -86,7 +86,7 @@ def _calcular(uf, cargo):
         except Exception:  # noqa: BLE001 - uma pessoa com dado faltando não derruba o cálculo
             dep_est = None
             r = {"integridade": None, "alertas": 0, "atencoes": 0, "titulos": []}
-        d, casa, _ = analise.desempenho_de(dep, dep_est)
+        d, casa, _ = analise.desempenho_de(dep, dep_est, c["id"])
         r["desempenho"] = d["nota"] if d else None
         r["casa"] = casa
         r["nota"] = analise.nota_pessoa(r["integridade"], r["desempenho"])

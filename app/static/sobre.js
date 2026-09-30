@@ -4,6 +4,7 @@
 // com o link do código aberto. Fica fora da trilha dos cargos, num painel aberto pelo topo.
 
 const REPOSITORIO = "https://github.com/GabrielVasovino/meu-voto";
+const CHAVE_PIX = "7817702b-3506-447d-be0d-ac8ae2f7686b";
 const sobre = { aba: "projeto" };
 
 const ABAS_SOBRE = {
@@ -52,6 +53,18 @@ function htmlSobreProjeto() {
       <li><strong>As notas seguem um método próprio.</strong> A nota geral, a integridade, o desempenho e a afinidade são cálculos deste site, explicados na aba Metodologia, e não uma avaliação oficial. A afinidade usa só ${quizDados?.perguntas?.length || 15} votações da Câmara.</li>
       <li><strong>Sem ligação com campanhas.</strong> O site não tem ligação com candidatos, partidos ou órgãos públicos e não recomenda em quem votar.</li>
     </ul>
+    <h3>Quem fez</h3>
+    <p>Sou Gabriel Vasovino e criei o Voto Informado por conta própria, sem ligação com partidos, campanhas ou governos. A ideia é simples: a informação para escolher bem já é pública, só que está espalhada e difícil de ler, e dá para juntar tudo num lugar e explicar em linguagem de gente. William Akihiro Alves Aisawa ajudou a colocar o site no ar.</p>
+    <p>O projeto é independente e de <a href="${REPOSITORIO}" target="_blank" rel="noopener">código aberto</a>: qualquer pessoa pode conferir como cada número é calculado.</p>
+    <h3>Apoie o projeto</h3>
+    <p>O site é gratuito e continua sendo, mas tem custo de servidor e de manutenção. Se ele foi útil e você quiser ajudar a mantê-lo no ar, qualquer valor por Pix ajuda. É totalmente opcional.</p>
+    <div class="pix-caixa">
+      <span class="pix-rot">Chave Pix (aleatória)</span>
+      <div class="pix-linha">
+        <input type="text" readonly value="${CHAVE_PIX}" id="pix-chave" aria-label="Chave Pix" onclick="this.select()">
+        <button type="button" class="btn pequeno primario" data-copiar-pix>Copiar</button>
+      </div>
+    </div>
     <h3>Privacidade</h3>
     <p>A sua cédula e as respostas do questionário ficam guardadas só no seu navegador. O servidor não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
 }
@@ -101,6 +114,7 @@ function htmlSobreMetodologia() {
     <ul>
       <li><strong>Câmara dos Deputados:</strong> presença nas votações do plenário, projetos aprovados que mudam regras, relatorias, poucos projetos simbólicos (homenagens, datas e nomes de obras, com peso dobrado), economia na cota parlamentar e menos emendas Pix (as transferências especiais, que são mais difíceis de rastrear).</li>
       <li><strong>ALESP:</strong> presença nas comissões, leis aprovadas que mudam regras, poucos projetos simbólicos (com peso dobrado) e economia na verba de gabinete.</li>
+      <li><strong>ALERJ:</strong> faltas nas sessões (relatórios mensais de presença), leis aprovadas que mudam regras (de autoria ou coautoria) e poucos projetos simbólicos (com peso dobrado), desde fevereiro de 2023. A ALERJ não publica a verba de gabinete por deputado de um jeito que dê para ler, então esse critério fica de fora.</li>
     </ul>
     <h3>Nota final de cada pessoa</h3>
     <div class="sobre-formula">Sem mandato: nota = integridade<br>Com mandato: nota = integridade + 0,4 × (desempenho − 50), entre 0 e 100</div>
@@ -177,6 +191,14 @@ async function preencherBases() {
       sobre.aba = aba.dataset.sobreAba;
       desenharSobre();
       $("#sobre-rolagem").scrollTop = 0;
+      return;
+    }
+    if (e.target.closest("[data-copiar-pix]")) {
+      const botao = e.target.closest("[data-copiar-pix]");
+      const campo = $("#pix-chave");
+      const feito = () => { botao.textContent = "Copiado"; setTimeout(() => { botao.textContent = "Copiar"; }, 2000); };
+      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(CHAVE_PIX).then(feito, () => { campo.select(); document.execCommand("copy"); feito(); });
+      else { campo.select(); document.execCommand("copy"); feito(); }
       return;
     }
     const ir = e.target.closest("[data-abrir-sobre]");

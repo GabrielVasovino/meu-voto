@@ -14,6 +14,7 @@ from urllib.parse import urlencode
 
 from curl_cffi import requests
 
+import alerj_desempenho
 import alesp
 import auxilio
 import camara
@@ -1067,8 +1068,8 @@ def nota_pessoa(integ, desempenho):
     return round(min(100, max(0, integ + ajuste)))
 
 
-def desempenho_de(dep, dep_est):
-    """Desempenho no mandato: Câmara para deputado federal, ALESP para deputado estadual de SP."""
+def desempenho_de(dep, dep_est, id_candidato=None):
+    """Desempenho no mandato: Câmara para deputado federal, ALESP ou ALERJ para deputado estadual."""
     if dep:
         d = camara.tabela_desempenho().get(dep["id"])
         if d:
@@ -1077,11 +1078,14 @@ def desempenho_de(dep, dep_est):
         d = alesp.tabela_desempenho().get(dep_est["id"])
         if d:
             return d, "estadual", alesp.criterios_rotulados(d["criterios"])
+    d = alerj_desempenho.do_candidato(id_candidato) if id_candidato else None
+    if d:
+        return d, "estadual", alerj_desempenho.criterios_rotulados(d["criterios"])
     return None, None, None
 
 
-def pontuacao(sinais, dep, dep_est):
-    d, casa, criterios = desempenho_de(dep, dep_est)
+def pontuacao(sinais, dep, dep_est, id_candidato=None):
+    d, casa, criterios = desempenho_de(dep, dep_est, id_candidato)
     integ = integridade(sinais)
     return {
         "integridade": integ,
@@ -1447,4 +1451,4 @@ def analisar(uf, cargo, id_candidato):
             "rede": {"pagas": de_candidatos or [], "pronto": de_candidatos is not None,
                      "minhas": [e for e in socio_de or [] if (e.get("outrasCampanhas") or {}).get("quantas")]},
             "patrimonioAnterior": {"ano": anteriores[-1]["ano"], "valor": anteriores[-1]["bens"]} if anteriores else None,
-            "sinais": sinais, "portalAtivo": portal_ativo, "pontuacao": pontuacao(sinais, dep, dep_est)}
+            "sinais": sinais, "portalAtivo": portal_ativo, "pontuacao": pontuacao(sinais, dep, dep_est, id_candidato)}

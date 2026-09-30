@@ -292,7 +292,7 @@ async function desenharGuia() {
         <p><strong>O objetivo do site é juntar esses dados num lugar só e explicar em linguagem simples</strong> quem é cada candidato, de onde vem o dinheiro da campanha, como votou quem já tem mandato e o que vale conferir antes de dar o seu voto.</p>
       </div>
       <p>Isso importa principalmente para deputado, o voto que costuma receber menos atenção, mesmo sendo a Câmara e a Assembleia que aprovam as leis e o orçamento. Ele vai primeiro para o partido ou a federação e ajuda a eleger outras pessoas da mesma lista, então vale saber quem o seu voto pode levar junto.</p>
-      <p class="nota-pequena">O site usa os mesmos critérios para todos os candidatos, não recomenda em quem votar e não leva a posição política de ninguém para as notas. O código é aberto, e a metodologia está explicada em <button type="button" class="link-btn" data-abrir-sobre="metodologia">Sobre e metodologia</button>.</p>
+      <p class="nota-pequena">O site usa os mesmos critérios para todos os candidatos, não recomenda em quem votar e não leva a posição política de ninguém para as notas. O código é aberto, e a metodologia está explicada em <button type="button" class="link-btn" data-abrir-sobre="metodologia">Sobre</button>.</p>
       <div class="guia-acoes"><span></span><button type="button" class="btn primario" data-guia="avancar">Como funciona →</button></div>`;
   } else if (etapa === 1) {
     html = `<h2 id="guia-titulo">Como funciona</h2>

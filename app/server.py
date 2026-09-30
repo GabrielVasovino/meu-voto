@@ -30,6 +30,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
+import alerj_desempenho
 import alesp
 import auxilio
 import analise
@@ -571,7 +572,7 @@ def _proposicao(id_proposicao):
 
 # Bases de dados públicos que se refazem sozinhas. Cada iniciar() só baixa de novo se a cópia estiver velha,
 # faltando ou se a última tentativa falhou, e nunca roda duas vezes ao mesmo tempo.
-BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes, senado, auxilio)
+BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes, senado, auxilio, alerj_desempenho)
 CONFERIR_BASES_A_CADA = 3600
 
 
@@ -594,6 +595,7 @@ DESCRICAO_BASES = (
     (cassacoes, lambda: cassacoes.PACOTE, "Cassações e registros negados em eleições de 2014 a 2024", "TSE"),
     (senado, senado._arquivo, "Presença dos senadores nas votações do plenário", "Senado Federal"),
     (auxilio, lambda: auxilio.PACOTE, "Auxílio Emergencial recebido por candidatos", "Portal da Transparência"),
+    (alerj_desempenho, lambda: alerj_desempenho.PACOTE, "Presença e leis dos deputados estaduais do RJ", "ALERJ"),
 )
 
 

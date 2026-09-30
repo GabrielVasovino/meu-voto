@@ -1474,6 +1474,11 @@ dialog.fornecedores-dlg { width: min(900px, 100vw - 24px); }
 
 /* ---------- sobre e metodologia ---------- */
 dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
+dialog.sobre-dlg .lista-dlg-cab { border-bottom: 0; }
+.pix-caixa { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin: 8px 0 16px; display: grid; gap: 6px; }
+.pix-rot { font-size: .78rem; font-weight: 700; color: var(--text-2); }
+.pix-linha { display: flex; gap: 8px; }
+.pix-linha input { flex: 1; min-width: 0; font: inherit; font-size: .88rem; font-variant-numeric: tabular-nums; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--text); }
 .sobre-abas { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 20px 12px; background: var(--surface); border-bottom: 1px solid var(--border); }
 .sobre-abas button {
   font: inherit; font-size: .9rem; font-weight: 600; cursor: pointer; color: var(--text-2);
