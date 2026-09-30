@@ -230,23 +230,6 @@ function htmlIndicadoresCarregando(progresso) {
   return `<p class="ind-carregando"><span class="giro" aria-hidden="true"></span>${texto}</p>`;
 }
 
-function htmlIndicadores(g) {
-  if (!g) return "";
-  const frases = [];
-  frases.push(g.semAlertaForte === g.membros
-    ? "Ninguém do grupo tem alerta forte."
-    : `${g.semAlertaForte === 0 ? "Todas as pessoas" : `${g.membros - g.semAlertaForte} das ${g.membros} pessoas`} ${g.membros - g.semAlertaForte === 1 ? "tem" : "têm"} algo para conferir${g.comAlertaSerio ? `, e ${g.comAlertaSerio === 1 ? "uma tem" : `${g.comAlertaSerio} têm`} alerta sério` : ""}.`);
-  frases.push(g.comMandato
-    ? `${g.comMandato === 1 ? "Uma pessoa já tem mandato de deputado" : `${g.comMandato} pessoas já têm mandato de deputado`}, e é daí que sai o desempenho.`
-    : "Ninguém do grupo tem mandato de deputado hoje, então não há desempenho para comparar.");
-  return `<div class="notas-lista">
-      ${linhaNota("<strong>Nota geral</strong>", g.indice, { titulo: EXPLICA_NOTA_GERAL })}
-      ${linhaNota("Integridade", g.integridade, { titulo: "Média de quem entraria. Começa em 100 e perde 20 pontos por ponto para conferir e 50 por alerta sério." })}
-      ${linhaNota("Desempenho no mandato", g.desempenho, { vazio: "Ninguém tem mandato de deputado", titulo: "Média de quem já é deputado, comparado aos colegas da mesma casa." })}
-    </div>
-    <p class="ind-resumo">${frases.join(" ")}</p>`;
-}
-
 function aplicarIndicadores() {
   if (!indicadoresAtual?.pronto) return;
   document.querySelectorAll("[data-nota-lista]").forEach((el) => {
@@ -446,23 +429,68 @@ function htmlAvisosPessoa(g, id) {
     <small>Nota geral ${p.nota ?? "—"} (integridade ${p.integridade ?? "—"}${desempenho})${p.titulos.length ? `: ${esc(p.titulos.join("; "))}` : ""}</small></span>`;
 }
 
-// Resumo de quem entraria: quantos têm algo para conferir e quais são os avisos, pessoa por pessoa.
-function htmlQuemEntraria(g, ind, entrariam) {
-  if (!ind || !entrariam.length) return "";
+// Primeira coisa da janela: quem ocuparia as vagas e onde o voto pesa mais.
+function htmlGuiaLista(g, aptos, vagas, faixa) {
+  const nomes = (lista) => listaNatural(lista.map((c) =>
+    `<button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>`));
+  const m = margemLista(g);
+  if (!vagas) {
+    return `<section class="callout lista-guia">
+      <h3>Como escolher nesta lista</h3>
+      <p>Se os votos de 2022 se repetissem, esta lista não elegeria ninguém${g.faltamParaMaisUma ? `: faltariam uns ${brlNumeroCurto(g.faltamParaMaisUma)} votos para a primeira vaga` : ""}.</p>
+      <p>O voto em qualquer candidato daqui soma para a lista tentar chegar lá. Se ela não chegar, o voto não elege ninguém desta lista.${aptos.length ? ` Os mais bem colocados são ${nomes(aptos.slice(0, 3))}.` : ""}</p>
+    </section>`;
+  }
+  const entram = aptos.filter((c) => c.posicao <= vagas);
+  const atras = aptos.filter((c) => c.posicao > vagas && c.posicao <= vagas + faixa);
+  const primeiros = vagas >= 3 ? entram.slice(0, 3) : entram.slice(0, vagas - 1);
+  const ultimo = entram[entram.length - 1];
+  return `<section class="callout lista-guia">
+    <h3>Como escolher nesta lista</h3>
+    <p>Se os votos de 2022 se repetissem, esta lista elegeria ${vagas === 1 ? "uma pessoa" : `${vagas} pessoas`}. Dentro da lista, as vagas ficam com os mais votados, por isso os candidatos abaixo estão em ordem de força: quem teve mais votos em 2022 e 2024 e arrecadou mais em 2026 aparece na frente.</p>
+    ${primeiros.length ? `<p>Os primeiros, como ${nomes(primeiros)}, devem entrar mesmo sem o seu voto.</p>` : ""}
+    ${ultimo && atras.length ? `<p><strong>Onde o seu voto pesa mais é na disputa pela ${vagas === 1 ? "vaga" : "última vaga"}.</strong> Hoje ela ficaria com ${nomes([ultimo])}, e logo atrás vêm ${nomes(atras)}. Nessa faixa, poucos votos decidem quem entra.</p>` : ""}
+    <p>Votar em alguém com chance baixa não é voto perdido: ele soma para a lista e ajuda a eleger quem está na frente dela, que pode não ser quem você escolheu.</p>
+    ${m.texto ? `<p>${m.tag} Pensando na lista inteira: ${m.texto.charAt(0).toLowerCase()}${m.texto.slice(1)}</p>` : ""}
+  </section>`;
+}
+
+// Cartão simples com a nota e os avisos de quem entraria. Os detalhes ficam para quem quiser abrir.
+function htmlResumoLista(g, ind, perfil, entrariam) {
+  const afinidade = linhaAfinidadeLista(g);
+  if (!ind) {
+    return `<section class="resumo-lista">${afinidade}<p class="explica">As notas de quem entraria ainda estão sendo calculadas.</p></section>`;
+  }
   const com = entrariam.map((c) => ({ c, p: ind.pessoas?.[String(c.id)] }))
     .filter((x) => x.p && (x.p.alertas || x.p.atencoes))
     .sort((a, b) => (b.p.alertas - a.p.alertas) || (b.p.atencoes - a.p.atencoes));
-  const cabeca = com.length
-    ? `${com.length} ${com.length === 1 ? "pessoa tem" : "pessoas têm"} algo para conferir entre as ${entrariam.length} que entrariam.`
-    : `Ninguém entre as ${entrariam.length} pessoas que entrariam tem algo para conferir.`;
-  return `<div class="quem-entraria">
-    <h3>Quem entraria: o que conferir</h3>
-    <p class="explica">${cabeca} Toque no nome para ver a ficha com os detalhes.</p>
-    ${com.length ? `<ul>${com.map(({ c, p }) => `<li>
-      <span class="badge ${nivelAnel(p.alertas, p.atencoes, p.integridade) === "serio" ? "bad" : "warn"}">${p.alertas ? "Alerta sério" : p.integridade < 50 ? "Vários pontos" : "Conferir"}</span>
-      <button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>
-      <small>${esc(p.titulos.join("; "))}</small></li>`).join("")}</ul>` : ""}
-  </div>`;
+  const serios = com.filter((x) => x.p.alertas).length;
+  const cabeca = !entrariam.length ? ""
+    : entrariam.length === 1
+      ? (com.length ? `A pessoa que entraria tem ${serios ? "alerta sério" : "algo para conferir"}.` : "A pessoa que entraria não tem nada para conferir.")
+    : com.length
+      ? `${com.length} das ${entrariam.length} pessoas que entrariam ${com.length === 1 ? "tem" : "têm"} algo para conferir${serios ? `, ${serios === 1 ? "uma delas com alerta sério" : `${serios} delas com alerta sério`}` : ""}.`
+      : `Ninguém entre as ${entrariam.length} pessoas que entrariam tem algo para conferir.`;
+  const mandato = ind.comMandato
+    ? `${ind.comMandato === 1 ? "Uma pessoa já tem mandato de deputado" : `${ind.comMandato} pessoas já têm mandato de deputado`}, e é daí que sai o desempenho.`
+    : "Ninguém do grupo tem mandato de deputado hoje, então não há desempenho para comparar.";
+  return `<section class="resumo-lista">
+    <h3>Quem entraria, em resumo</h3>
+    ${linhaNota("<strong>Nota geral</strong>", ind.indice, { titulo: EXPLICA_NOTA_GERAL })}
+    ${afinidade}
+    ${cabeca ? `<p class="resumo-frase">${cabeca}</p>` : ""}
+    <details class="mais resumo-detalhes"><summary>Ver a nota por partes e os avisos de cada um</summary>
+      <div class="notas-lista">
+        ${linhaNota("Integridade", ind.integridade, { titulo: "Média de quem entraria. Começa em 100 e perde 20 pontos por ponto para conferir e 50 por alerta sério." })}
+        ${linhaNota("Desempenho no mandato", ind.desempenho, { vazio: "Ninguém tem mandato de deputado", titulo: "Média de quem já é deputado, comparado aos colegas da mesma casa." })}
+      </div>
+      <p class="analise-texto">${mandato}${perfil ? ` ${textoPerfil(perfil)}` : ""}</p>
+      ${com.length ? `<ul class="quem-entraria">${com.map(({ c, p }) => `<li>
+        <span class="badge ${nivelAnel(p.alertas, p.atencoes, p.integridade) === "serio" ? "bad" : "warn"}">${p.alertas ? "Alerta sério" : p.integridade < 50 ? "Vários pontos" : "Conferir"}</span>
+        <button type="button" class="link-btn" data-ficha-lista="${c.id}">${esc(nomeProprio(c.nomeUrna))}</button>
+        <small>${esc(p.titulos.join("; "))}</small></li>`).join("")}</ul>` : ""}
+    </details>
+  </section>`;
 }
 
 function htmlListaCompleta(g, r, item) {
@@ -477,29 +505,24 @@ function htmlListaCompleta(g, r, item) {
     ["Chance muito baixa", "Estão longe das vagas, e o voto neles ajuda principalmente a lista. Aqui, cerca de 1 em cada 100 se elege.", aptos.filter((c) => c.chance === "Muito baixa" && !(vagas && c.posicao <= vagas + faixa)), false],
     ["Candidatura com problema", "O registro foi negado ou cancelado, e o voto pode não valer.", problema, false],
   ].filter(([, , lista]) => lista.length);
-  const m = margemLista(g);
   const ind = indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id] : null;
-  const perfil = perfisAtual?.[g.id];
   return `<header class="lista-dlg-cab">
       <div><h2>${esc(agremiacao(g.id))}</h2>
         <p>${aptos.length} candidatos disputam ${g.vagas === 1 ? "a vaga estimada" : `as ${g.vagas} vagas estimadas`}. Em 2022, esta lista teve ${pct.format(g.percentual)} dos votos.</p></div>
       <button type="button" class="fechar" data-fechar-lista aria-label="Fechar">✕</button>
     </header>
     <div class="lista-dlg-rolagem">
+      ${htmlGuiaLista(g, aptos, vagas, faixa)}
       ${htmlAvisoEstimativa()}
-      <section class="analise-lista">
-        ${linhaAfinidadeLista(g)}
-        ${ind ? htmlIndicadores(ind) : `<p class="explica">As notas ainda estão sendo calculadas.</p>`}
-        ${perfil ? `<p class="analise-texto">${textoPerfil(perfil)}</p>` : ""}
-        ${m.texto ? `<p class="analise-texto">${m.tag} ${m.texto}</p>` : ""}
-        ${htmlQuemEntraria(g, ind, aptos.filter((c) => c.posicao <= vagas))}
-      </section>
-      <section class="rede-lista-sec" id="rede-lista"><p class="carregando">Cruzando o dinheiro entre os candidatos da lista…</p></section>
+      ${htmlResumoLista(g, ind, perfisAtual?.[g.id], aptos.filter((c) => c.posicao <= vagas))}
       ${grupos.map(([titulo, expl, lista, aberto]) => `<details class="faixa-lista"${aberto ? " open" : ""}>
         <summary><strong>${titulo}</strong> <span class="contador">${lista.length}</span><small>${expl}</small></summary>
         <ul class="cand-linhas">${lista.map((c) => linhaCandidato(c, g, item)).join("")}</ul>
       </details>`).join("")}
       <p class="nota-pequena">A ordem segue a força de cada candidato, que junta a maior votação recente (para deputado em 2022 ou para vereador ou prefeito em 2024) e o dinheiro arrecadado em 2026. Clique no nome para abrir a ficha completa.</p>
+      <details class="faixa-lista rede-lista-sec" id="rede-lista">
+        <summary><strong>Dinheiro entre candidatos</strong><small>Cruzando o dinheiro entre os candidatos da lista…</small></summary>
+      </details>
     </div>`;
 }
 
@@ -529,12 +552,19 @@ async function carregarRedeLista(idGrupo, item) {
   const repasses = rp.total ? `<p class="rede-texto">Os candidatos da lista receberam ${brlCompacto.format(rp.total)} de outros candidatos, e ${pct.format(rp.publico / rp.total)} disso é dinheiro do Fundo Eleitoral ou do Fundo Partidário${rp.daLista ? `; ${brlCompacto.format(rp.daLista)} veio de colegas da própria lista` : ""}. Quem mais repassou:</p>
       <ul class="lista-simples">${rp.doadores.map((d) => `<li>${esc(nomeProprio(d.nome || "candidato"))} (${esc(d.partido || "")}${d.cargo ? `, ${esc(d.cargo.toLowerCase())}` : ""}): ${brlCompacto.format(d.valor)}</li>`).join("")}</ul>`
     : `<p class="explica">Os candidatos desta lista não receberam repasses de outros candidatos.</p>`;
-  alvo.innerHTML = `<h3>Dinheiro entre candidatos</h3>
+  const resumo = [
+    r.totalEmpresas ? `${r.totalEmpresas} ${r.totalEmpresas === 1 ? "empresa de candidato da lista recebeu" : "empresas de candidatos da lista receberam"} de outras campanhas` : "",
+    rp.total ? `${brlCompacto.format(rp.total)} em repasses de outros candidatos` : "",
+  ].filter(Boolean).join(", e ");
+  alvo.innerHTML = `<summary><strong>Dinheiro entre candidatos</strong>
+      <small>${resumo ? `${resumo.charAt(0).toUpperCase()}${resumo.slice(1)}. Toque para ver.` : "Nada encontrado entre os candidatos desta lista."}</small></summary>
+    <div class="rede-corpo">
     <h4 class="rede-sub">Empresas de candidatos da lista pagas por outras campanhas</h4>
     ${empresas}
     <h4 class="rede-sub">Repasses de outros candidatos</h4>
     ${repasses}
-    <p class="nota-pequena">Repassar o Fundo Eleitoral entre candidatos do mesmo partido é permitido e comum: é assim que o partido divide o dinheiro. Já a empresa de um candidato que recebe de muitas campanhas vale uma olhada, porque também é um caminho para o dinheiro de campanha chegar a um aliado. Os sócios vêm da Receita Federal.</p>`;
+    <p class="nota-pequena">Repassar o Fundo Eleitoral entre candidatos do mesmo partido é permitido e comum: é assim que o partido divide o dinheiro. Já a empresa de um candidato que recebe de muitas campanhas vale uma olhada, porque também é um caminho para o dinheiro de campanha chegar a um aliado. Os sócios vêm da Receita Federal.</p>
+    </div>`;
 }
 
 (function ligarListas() {

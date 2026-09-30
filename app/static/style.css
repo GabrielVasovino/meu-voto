@@ -1381,6 +1381,20 @@ details.lista-mais .lista-margem { margin: 0; display: flex; flex-direction: col
 
 .quem-entraria .explica { font-size: .86rem; margin: 0; }
 
+/* janela da lista: guia de como escolher e cartão com a nota de quem entraria */
+.lista-guia p { font-size: .9rem; line-height: 1.55; }
+.lista-guia .link-btn { font-size: inherit; font-weight: 600; }
+.lista-guia .leitura-tag { margin-right: 4px; }
+.resumo-lista { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; margin-bottom: 16px; display: grid; gap: 8px; }
+.resumo-lista h3 { font-size: 1rem; margin: 0; }
+.resumo-lista .explica { margin: 0; }
+.resumo-frase { margin: 0; font-size: .88rem; color: var(--text-2); line-height: 1.5; }
+.resumo-detalhes { margin-top: 2px; }
+.resumo-detalhes > summary { margin-bottom: 0; }
+.resumo-detalhes[open] > summary { margin-bottom: 10px; }
+.resumo-detalhes .analise-texto { margin-bottom: 10px; }
+ul.quem-entraria { list-style: none; margin: 0; display: grid; gap: 8px; }
+
 /* ---------- ficha: empresas em que o candidato é sócio ---------- */
 .emp-conta { font-size: .8rem; font-weight: 600; color: var(--text-2); background: var(--surface-2); border-radius: 999px; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
 .emp-socios { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
@@ -1588,8 +1602,9 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
 .rede-valor small { font-weight: 500; }
 .rede-texto { margin: 0; font-size: .88rem; color: var(--text-2); line-height: 1.5; }
 .rede-item .chips { margin-top: 0; }
-.rede-lista-sec { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
-.rede-lista-sec h3 { font-size: 1.1rem; margin: 0 0 8px; }
+.rede-lista-sec { margin-top: 16px; }
+.rede-corpo { padding: 0 16px 14px; }
+.rede-corpo .rede-sub:first-child { margin-top: 4px; }
 .rede-sub { font-size: .8rem; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--text-2); margin: 16px 0 8px; }
 @media (max-width: 560px) {
   .rede-topo { flex-direction: column; gap: 4px; }
