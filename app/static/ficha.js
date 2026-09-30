@@ -67,7 +67,7 @@ function slotParaCargo(cargo) {
 async function abrirFicha(cargo, id) {
   const minha = ++fichaPedido;
   Object.assign(ficha, {
-    id, cargo, f: null, a: null, n: null, erroAnalise: null, g: null, aba: "resumo",
+    id, cargo, f: null, a: null, erroAnalise: null, g: null, aba: "resumo",
     sub: { politica: "posicoes", dinheiro: "geral" }, filtro: "todos",
   });
   const dlg = $("#ficha");
@@ -77,14 +77,6 @@ async function abrirFicha(cargo, id) {
   $("#ficha-painel").innerHTML = "";
   if (!dlg.open) dlg.showModal();
   const pedidoAnalise = api(`/api/analise?uf=${ufConsulta(cargo)}&cargo=${cargo}&id=${id}`);
-  // Notícias chegam por conta própria; só redesenham se a pessoa estiver na aba "Quem é".
-  api(`/api/noticias?uf=${ufConsulta(cargo)}&cargo=${cargo}&id=${id}`)
-    .then((n) => n, () => ({ erro: true }))
-    .then((n) => {
-      if (minha !== fichaPedido) return;
-      ficha.n = n;
-      if (ficha.f && ficha.aba === "quem") desenharFicha(true);
-    });
   try {
     ficha.f = await api(`/api/ficha?uf=${ufConsulta(cargo)}&cargo=${cargo}&id=${id}`);
   } catch (e) {
@@ -640,7 +632,7 @@ function painelQuem() {
   const blocoTraj = traj ? htmlTrajetoria(traj, f) : htmlTrajetoriaSimples(f);
   const blocoBens = htmlPatrimonio(f, traj);
   const blocoEmpresas = htmlEmpresasSocio(ficha.a?.empresas);
-  const blocoNoticias = htmlNoticias(ficha.n, f);
+  const blocoNoticias = htmlNoticias(f);
 
   const links = [
     ...f.sites.map((s) => {
@@ -663,30 +655,22 @@ function painelQuem() {
     <p class="fonte">Fonte: TSE, DivulgaCandContas. Registro atualizado em ${esc(dataBr(f.atualizadoEm))}.</p>`;
 }
 
-// Manchetes recentes (Google Notícias): só título, veículo, data e link. Contexto, não prova; não entra na nota.
-function htmlNoticias(n, f) {
-  if (!n) return secao("Nas notícias", `<p class="explica">Buscando notícias dos últimos 6 meses…</p>`);
-  if (n.erro) return secao("Nas notícias", `<p class="explica">A busca de notícias não respondeu agora. Tente abrir a ficha de novo mais tarde.</p>`);
-  if (!n.noticias?.length) {
-    return secao("Nas notícias", `<p class="explica">Nenhuma manchete dos últimos 6 meses cita ${esc(nomeProprio(f.nomeUrna))} pelo nome de urna.</p>`);
-  }
-  const mostrar = 6;
-  const item = (x) => `<li class="noticia${x.risco ? " risco" : ""}">
-      <a href="${esc(x.link)}" target="_blank" rel="noopener">${esc(x.titulo)}</a>
-      <small>${esc(x.veiculo || x.site)}${x.data ? ` · ${dataBr(x.data)}` : ""}${x.risco ? ` · <span class="badge warn">fala de investigação ou processo</span>` : ""}</small>
-    </li>`;
-  // As que falam de investigação vêm primeiro; o resto por data.
-  const ordem = [...n.noticias].sort((a, b) => (b.risco - a.risco) || (b.data || "").localeCompare(a.data || ""));
-  const assuntos = n.assuntos?.length
-    ? `<div class="noticias-assuntos"><span>Assuntos mais citados</span><div class="chips">${n.assuntos.map((a) => `<span class="chip">${esc(a.termo)} <small>${a.vezes}</small></span>`).join("")}</div></div>` : "";
-  const lista = `<ul class="noticias">${ordem.slice(0, mostrar).map(item).join("")}</ul>
-    ${ordem.length > mostrar ? `<details class="mais"><summary>Ver as ${ordem.length} manchetes</summary><ul class="noticias">${ordem.slice(mostrar).map(item).join("")}</ul></details>` : ""}`;
-  const texto = n.comRisco
-    ? `${n.comRisco === 1 ? "Uma manchete fala" : `${n.comRisco} manchetes falam`} de investigação, processo ou acusação. Notícia não é condenação: leia a matéria e veja se há decisão da Justiça.`
-    : "Nenhuma manchete recente fala de investigação ou processo. Os assuntos mostram do que a imprensa mais tem falado sobre a pessoa.";
-  return secao(`Nas notícias <span class="emp-conta">${n.total}</span>`,
-    assuntos + lista + `<p class="fonte">Fonte: Google Notícias, manchetes dos últimos 6 meses que citam o nome de urna (busca de ${esc(n.geradoEm)}). O app guarda só título, veículo e link.</p>`,
-    leitura(n.comRisco ? "atencao" : "neutro", texto));
+// Mesma busca de noticias.py: o nome de urna entre aspas junto com o cargo ou o partido, para não misturar homônimos.
+const CARGO_BUSCA = {
+  1: "presidente OR presidência", 3: "governador OR governadora OR governo", 5: "senador OR senadora OR Senado",
+  6: "deputado OR deputada OR Câmara", 7: "deputado OR deputada OR Assembleia", 8: "deputado OR deputada OR distrital",
+};
+
+// Notícias recentes no Google Notícias, que abre em outra aba. Contexto, não prova; não entra na nota.
+function htmlNoticias(f) {
+  const nome = String(f.nomeUrna || "").split(/\s+/).filter(Boolean).join(" ");
+  if (!nome) return "";
+  const extra = [CARGO_BUSCA[ficha.cargo], f.partido?.sigla].filter(Boolean).join(" OR ");
+  const consulta = `"${nome}"${extra ? ` (${extra})` : ""} when:180d`;
+  const url = `https://news.google.com/search?${new URLSearchParams({ q: consulta, hl: "pt-BR", gl: "BR", ceid: "BR:pt-419" })}`;
+  return secao("Nas notícias", `<p class="explica">Veja as manchetes dos últimos 6 meses que citam ${esc(nomeProprio(nome))} pelo nome de urna.
+    Notícia não é condenação: se alguma falar de investigação ou processo, leia a matéria e veja se há decisão da Justiça.</p>
+    <div class="links"><a href="${esc(url)}" target="_blank" rel="noopener">Buscar no Google Notícias</a></div>`);
 }
 
 // Empresas em que a pessoa é sócia (base de sócios da Receita), com o que o dinheiro público e de campanha diz de cada uma.

@@ -1,54 +1,102 @@
-name: Deploy Voto Informado OCI
+name: Publicar no GitHub Pages
 
+# Todo commit na main publica o site. Se o commit só mexe na interface (app/static), a publicação reaproveita os
+# dados da última execução e leva um minuto; se mexe na análise (app/*.py), refaz tudo. A cada 6 horas o site é
+# refeito com os dados mais novos das fontes públicas.
 on:
   push:
-   branches: [main]
-  workflow_dispatch: 
+    branches: [main]
+  schedule:
+    - cron: "0 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      so_interface:
+        description: "Só publicar a interface, sem refazer os dados"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
-  group: deploy
+  group: pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
+  gerar:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 350
+    env:
+      TZ: America/Sao_Paulo
+      PYTHONUNBUFFERED: "1"
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          MONITOR_CHAVE: ${{ secrets.MONITOR_CHAVE }}
+      - uses: actions/checkout@v4
         with:
-          envs: MONITOR_CHAVE
-          host: ${{ secrets.ORACLE_VM_IP }}
-          username: ${{ secrets.ORACLE_VM_USER }}
-          key: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}
-          passphrase: ${{ secrets.ORACLE_SSH_PASSPHRASE }}
-          port: 22
-          script: |
-            set -e
+          fetch-depth: 0
 
-            echo "iniciando o deploy no servidor..."
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
 
-            if [ ! -d "meu-voto" ]; then 
-              echo "Clonando repositório meu-voto..."
-              git clone git@github.com:GabrielVasovino/meu-voto.git meu-voto
+      - run: pip install -r requirements.txt
+
+      # Cache dos dados públicos (bases do TSE, da CGU, da Câmara...) e as respostas geradas na execução anterior.
+      - name: Restaurar os dados da execução anterior
+        uses: actions/cache/restore@v4
+        with:
+          path: .cache-meuvoto
+          key: meuvoto-${{ github.run_id }}
+          restore-keys: meuvoto-
+
+      - name: Decidir o que refazer
+        id: modo
+        run: |
+          so=false
+          if [ -d .cache-meuvoto/api ]; then
+            if [ "${{ github.event_name }}" = "push" ]; then
+              antes="${{ github.event.before }}"
+              if git cat-file -e "$antes^{commit}" 2>/dev/null \
+                && ! git diff --name-only "$antes" "${{ github.sha }}" | grep -qvE '^(app/static/|README\.md$|\.github/)'; then
+                so=true
+              fi
+            elif [ "${{ inputs.so_interface }}" = "true" ]; then
+              so=true
             fi
+          fi
+          echo "so_interface=$so" >> "$GITHUB_OUTPUT"
+          echo "Só a interface: $so"
 
-            cd meu-voto
+      - name: Gerar o site
+        run: |
+          args="--cache .cache-meuvoto/dados --api .cache-meuvoto/api --saida _site"
+          if [ "${{ steps.modo.outputs.so_interface }}" = "true" ]; then
+            python app/gerar_estatico.py $args --so-interface
+          else
+            python app/gerar_estatico.py $args --espera 60 --prazo 230
+          fi
+          du -sh _site
+          find _site -type f | wc -l
 
-            echo "Puxando últimas alterações da branch main..."
-            git fetch origin
-            git reset --hard origin/main
+      - name: Guardar os dados para a próxima execução
+        if: always() && steps.modo.outputs.so_interface == 'false'
+        uses: actions/cache/save@v4
+        with:
+          path: .cache-meuvoto
+          key: meuvoto-${{ github.run_id }}
 
-            echo "Garantindo a rede compartilhada com o nginx..."
-            docker network inspect web >/dev/null 2>&1 || docker network create web
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
 
-            echo "Reconstruindo e subindo os containers..."
-            docker compose up -d --build
-
-            echo "Limpando imagens antigas..."
-            docker image prune -f
-
-            echo "Deploy concluído com sucesso!"
-            docker compose ps
+  publicar:
+    needs: gerar
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

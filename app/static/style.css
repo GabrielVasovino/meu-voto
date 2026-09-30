@@ -1419,17 +1419,6 @@ ul.quem-entraria { list-style: none; margin: 0; display: grid; gap: 8px; }
 .foto.anel-serio, .maj-foto.anel-serio { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--bad); }
 .afin-mini b small { font-weight: 500; color: var(--text-3); font-size: .72rem; }
 
-/* ---------- ficha: notícias ---------- */
-.noticias-assuntos { display: grid; gap: 6px; margin-bottom: 12px; }
-.noticias-assuntos > span { font-size: .72rem; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--text-3); }
-.noticias-assuntos .chip small { color: var(--text-3); margin-left: 2px; }
-.noticias { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.noticia { display: grid; gap: 3px; padding-left: 10px; border-left: 3px solid var(--border); }
-.noticia.risco { border-left-color: var(--warn); }
-.noticia a { color: var(--text); font-weight: 600; font-size: .92rem; line-height: 1.35; text-decoration: none; }
-.noticia a:hover { text-decoration: underline; }
-.noticia small { color: var(--text-3); font-size: .78rem; }
-
 /* ---------- fornecedores de campanha (painel próprio, aberto pelo topo) ---------- */
 dialog.fornecedores-dlg { width: min(900px, 100vw - 24px); }
 .forn-resumo { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 14px; }
