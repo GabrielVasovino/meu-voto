@@ -82,6 +82,12 @@ function htmlSobreMetodologia() {
       <li><strong>Emenda e campanha na mesma empresa:</strong> quando uma empresa recebeu emenda indicada pelo próprio deputado e depois foi paga pela campanha dele. Só informa, e plataformas e grandes empresas ficam de fora.</li>
       <li><strong>Repasses entre candidatos:</strong> dividir o Fundo Eleitoral entre candidatos do mesmo partido é permitido e comum, e aparece só como contexto.</li>
     </ul>
+    <h3>Gabinete e campanha</h3>
+    <p>Para quem já tem mandato, o site cruza quem trabalha ou trabalhou no gabinete (Senado, Câmara e ALESP publicam essas listas) com quem doou para a campanha ou foi pago por ela, pelo nome completo e só dentro da campanha do próprio chefe. Assessor doar para o chefe é permitido e comum: metade dessas doações é de até R$ 3 mil. O aviso só tira pontos (10) quando um assessor doou mais de R$ 10 mil, mais do que um mês de salário da maioria deles, porque devolver parte do salário ao político (a "rachadinha") é crime. Assessor pago pela campanha só informa.</p>
+    <h3>Condenações por improbidade</h3>
+    <p>O Conselho Nacional de Justiça mantém o cadastro de condenados por improbidade administrativa, que só inclui decisões definitivas ou de tribunal. O site consulta o cadastro pelo CPF de cada candidato. Uma condenação é alerta sério (50 pontos), e a ficha mostra o processo, o tribunal, a data e as penas.</p>
+    <h3>A campanha de 2022</h3>
+    <p>Para quem também disputou em 2022, os mesmos cruzamentos são feitos com as contas daquela campanha e aparecem juntos num aviso só, "Na campanha de 2022": doador que recebeu mais do que doou, empresa do próprio candidato paga pela campanha e doação de assessor. Cada tipo encontrado tira 10 pontos, no máximo 20. A pessoa é ligada entre as duas eleições pelo CPF.</p>
     <h3>Desempenho no mandato</h3>
     <p>Vale só para quem já é deputado federal ou deputado estadual de São Paulo, que são as casas com dados abertos completos. Em cada critério, a pessoa é comparada com os colegas da mesma casa e recebe uma posição de 0 a 100, em que 50 é o deputado típico. O desempenho é a média dessas posições.</p>
     <ul>
@@ -126,6 +132,8 @@ function htmlSobreDados() {
       <li><strong>Câmara dos Deputados e ALESP:</strong> votações, presença, projetos, relatorias, cota parlamentar e verba de gabinete.</li>
       <li><strong>Receita Federal:</strong> cadastro das empresas e sócios, para saber de quem são os fornecedores e em que empresas cada candidato é sócio.</li>
       <li><strong>CGU e Portal da Transparência:</strong> cadastros de empresas e pessoas punidas (CEIS, CNEP e CEAF) e emendas parlamentares.</li>
+      <li><strong>Senado, Câmara e ALESP:</strong> quem trabalha ou trabalhou nos gabinetes.</li>
+      <li><strong>CNJ:</strong> cadastro nacional de condenações por improbidade administrativa.</li>
       <li><strong>TCU, Ministério do Trabalho e Ibama:</strong> contas julgadas irregulares, lista suja do trabalho escravo e áreas embargadas.</li>
       <li><strong>Banco Central:</strong> inflação (IPCA), para comparar patrimônios de anos diferentes.</li>
       <li><strong>Wikipédia e Wikimedia Commons:</strong> logos dos partidos, que são marcas de cada partido e aparecem só para identificá-los.</li>

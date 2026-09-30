@@ -33,7 +33,10 @@ from urllib.parse import parse_qs, urlparse
 import alesp
 import analise
 import camara
+import contas2022
 import emendas
+import gabinetes
+import improbidade
 import gastos
 import historico
 import indicadores
@@ -563,7 +566,7 @@ def _proposicao(id_proposicao):
 
 # Bases de dados públicos que se refazem sozinhas. Cada iniciar() só baixa de novo se a cópia estiver velha,
 # faltando ou se a última tentativa falhou, e nunca roda duas vezes ao mesmo tempo.
-BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes)
+BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas2022)
 CONFERIR_BASES_A_CADA = 3600
 
 
@@ -577,6 +580,10 @@ DESCRICAO_BASES = (
     (camara, camara._arquivo_resumo, "Votações, presença, projetos e cota dos deputados federais", "Câmara dos Deputados"),
     (emendas, emendas._banco, "Emendas parlamentares e quem recebeu o dinheiro", "Portal da Transparência e Transferegov"),
     (alesp, alesp._arquivo, "Presença, projetos e verba de gabinete dos deputados estaduais de SP", "ALESP"),
+    (gabinetes, gabinetes._arquivo, "Assessores dos gabinetes de senadores, deputados federais e deputados estaduais de SP",
+     "Senado, Câmara e ALESP"),
+    (improbidade, lambda: improbidade.PACOTE, "Condenações por improbidade administrativa", "CNJ"),
+    (contas2022, lambda: contas2022.PACOTE, "Campanha de 2022 de quem disputa de novo", "TSE"),
 )
 
 
@@ -590,7 +597,7 @@ def _status_bases():
             "atualizando": st.get("etapa") not in ("pronto", "parado", "erro"),
             "falhou": st.get("etapa") == "erro",
             # O índice da Receita chega pronto com o site: vale a data em que foi montado, não a da cópia.
-            "atualizadoEm": (st.get("geradoEm") if modulo is empresas else None)
+            "atualizadoEm": (st.get("geradoEm") if modulo in (empresas, improbidade, contas2022) else None)
             or (datetime.fromtimestamp(arq.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if arq.exists() else None),
         })
     return saida

@@ -16,8 +16,11 @@ from curl_cffi import requests
 
 import alesp
 import camara
+import contas2022
 import emendas
 import empresas
+import gabinetes
+import improbidade
 import gastos
 import historico
 import partidos as perfis
@@ -586,6 +589,118 @@ def _sinais_emenda_campanha(dep, g):
     return s
 
 
+def _lista_valores(itens):
+    """[(nome, valor)] -> "Fulana (R$ 2.000), Beltrano (R$ 500)", dos maiores para os menores, no máximo 5."""
+    itens = sorted(itens, key=lambda x: -x[1])
+    texto = ", ".join(f"{n} ({_brl0(v)})" for n, v in itens[:5])
+    return texto + (f" e mais {len(itens) - 5}" if len(itens) > 5 else "")
+
+
+def _sinais_improbidade(id_candidato):
+    """Condenação por improbidade no cadastro do CNJ, que só registra trânsito em julgado ou decisão colegiada."""
+    conds = improbidade.do_candidato(id_candidato)
+    if not conds:
+        return []
+    partes = []
+    for c in conds:
+        penas = [f"devolver {_brl0(c['ressarcimento'])}" if c.get("ressarcimento") else "",
+                 f"multa de {_brl0(c['multa'])}" if c.get("multa") else "",
+                 "suspensão dos direitos políticos" if c.get("suspensaoDireitos") else "",
+                 "perda do cargo" if c.get("perdaCargo") else ""]
+        penas = [p for p in penas if p]
+        partes.append(f"processo {c.get('processo') or 'sem número'}"
+                      f"{', no ' + c['tribunal'] if c.get('tribunal') else ''}"
+                      f"{', ' + c['tipo'] if c.get('tipo') else ''}"
+                      f"{' em ' + c['data'] if c.get('data') else ''}"
+                      f"{' (' + listar(penas) + ')' if penas else ''}")
+    qtd = "uma condenação" if len(conds) == 1 else f"{len(conds)} condenações"
+    return [_sinal("alerta", "Condenado por improbidade administrativa",
+                   f"O Cadastro Nacional do CNJ registra {qtd} por improbidade administrativa: {'; '.join(partes)}. "
+                   "O cadastro só inclui decisões definitivas ou de tribunal (órgão colegiado).",
+                   "CNJ, Cadastro Nacional de Condenações por Improbidade", conds[0].get("link"))]
+
+
+DOACAO_ALTA_ASSESSOR = 10_000
+
+
+def _sinais_2022(id_candidato):
+    """A campanha de 2022 da mesma pessoa, num aviso só. Cada tipo de problema tira 10 pontos, no máximo 20."""
+    c = contas2022.do_candidato(id_candidato)
+    if not c:
+        return []
+    frases, pontos = [], 0
+    if c["doouRecebeu"]:
+        pontos += 10
+        lista = c["doouRecebeu"]
+        frases.append("Doaram R$ 5 mil ou mais e receberam da campanha mais do que doaram: " + "; ".join(
+            f"{x['nome']} doou {_brl0(x['doou'])} e recebeu {_brl0(x['recebeu'])}" for x in lista[:3])
+            + (f"; e mais {len(lista) - 3}" if len(lista) > 3 else "") + ".")
+    if c["empresaPropria"]:
+        pontos += 10
+        frases.append("A campanha pagou empresa do próprio candidato: "
+                      + _lista_valores([(x["nome"], x["valor"]) for x in c["empresaPropria"]]) + ".")
+    if c["assessores"]:
+        if max(x["valor"] for x in c["assessores"]) >= DOACAO_ALTA_ASSESSOR:
+            pontos += 10
+        frases.append("Pessoas que trabalham ou trabalharam no gabinete doaram: " + _lista_valores([(x["nome"], x["valor"]) for x in c["assessores"]]) + ".")
+    pontos = min(pontos, 20)
+    return [_sinal("atencao" if pontos else "info", "Na campanha de 2022",
+                   f"Em 2022, disputou para {c['cargo'].lower()} em {c['uf']}. " + " ".join(frases)
+                   + ("" if pontos else " Nada disso tira pontos."),
+                   "TSE (prestação de contas de 2022)", categoria="2022", pontos=pontos or None)]
+
+
+def _sinais_gabinete(id_candidato):
+    """Assessores do gabinete (Senado, Câmara ou ALESP) que doaram para a campanha ou foram pagos por ela.
+    Só informação: os dois são permitidos e comuns. O nome precisa bater por inteiro (e ter pelo menos três
+    partes), dentro da campanha do próprio chefe, para não confundir homônimos."""
+    g = gabinetes.do_candidato(id_candidato)
+    if not g or not gastos._banco().exists():
+        return []
+    equipe = {n: a for n, a in g["assessores"].items() if len(n.split()) >= 3}
+    doou, pago = {}, {}
+    c = gastos._conectar()
+    try:
+        # Doação de pessoa física que não é o próprio candidato (recursos próprios ficam de fora).
+        proprio = c.execute("SELECT nome FROM candidatos WHERE sq_candidato = ?", (int(id_candidato),)).fetchone()
+        equipe.pop(camara._normalizar(proprio["nome"]) if proprio else "", None)
+        for nome, valor in c.execute(f"SELECT nome, valor FROM receitas WHERE sq_candidato = ? AND {gastos._DOACAO_PF}",
+                                     (int(id_candidato),)):
+            n = camara._normalizar(nome)
+            if n in equipe:
+                doou[n] = doou.get(n, 0) + (valor or 0)
+        for nome, valor in c.execute("SELECT nome, valor FROM despesas WHERE sq_candidato = ? AND tipo = 'PF'",
+                                     (int(id_candidato),)):
+            n = camara._normalizar(nome)
+            if n in equipe:
+                pago[n] = pago.get(n, 0) + (valor or 0)
+    finally:
+        c.close()
+    onde = " e ".join({"Senado": "no Senado", "Câmara": "na Câmara", "ALESP": "na ALESP"}[x] for x in g["casas"])
+    s = []
+    if doou:
+        # Metade das doações de assessores é de até R$ 3 mil e 9 em cada 10 ficam até R$ 10 mil; acima disso, a doação
+        # passa de um mês de salário da maioria dos assessores e vale conferir (tira 10 pontos).
+        alta = max(doou.values()) >= DOACAO_ALTA_ASSESSOR
+        s.append(_sinal("atencao" if alta else "info", "Assessores do gabinete doaram para a campanha",
+                        f"{len(doou)} {'pessoa que trabalha ou trabalhou' if len(doou) == 1 else 'pessoas que trabalham ou trabalharam'} "
+                        f"no gabinete {onde} {'doou' if len(doou) == 1 else 'doaram'} {_brl0(sum(doou.values()))} para esta campanha: "
+                        f"{_lista_valores([(equipe[n]['nome'], v) for n, v in doou.items()])}. Doar para o chefe é permitido e comum. "
+                        "Vale olhar quando o valor é alto perto do salário de um assessor, porque devolver parte do salário ao "
+                        "político (a \"rachadinha\") é crime."
+                        + (f" Aqui, ao menos uma doação passa de {_brl0(DOACAO_ALTA_ASSESSOR)}, mais do que um mês de salário "
+                           "da maioria dos assessores." if alta else ""),
+                        "Senado, Câmara e ALESP (servidores) e TSE", categoria="gabinete", pontos=10 if alta else None))
+    if pago:
+        s.append(_sinal("info", f"Assessores do gabinete foram pagos pela campanha",
+                        f"{len(pago)} {'pessoa que trabalha ou trabalhou' if len(pago) == 1 else 'pessoas que trabalham ou trabalharam'} "
+                        f"no gabinete {onde} {'recebeu' if len(pago) == 1 else 'receberam'} {_brl0(sum(pago.values()))} da campanha: "
+                        f"{_lista_valores([(equipe[n]['nome'], v) for n, v in pago.items()])}. Assessor pode trabalhar na campanha "
+                        "fora do expediente ou de licença; o que não pode é usar o horário pago pelo dinheiro público.",
+                        "Senado, Câmara e ALESP (servidores) e TSE", categoria="gabinete"))
+    return s
+
+
 def _sinais_fornecedor_candidato(lista, total=None):
     """A campanha pagou empresa de outro candidato de 2026. Quando a mesma empresa atende outras campanhas, o aviso
     mostra essa rede, para ninguém achar que é um caso isolado (ou que é uma rede quando não é)."""
@@ -1138,6 +1253,9 @@ def analisar(uf, cargo, id_candidato):
     analise_gastos = gastos.analisar_candidato(int(id_candidato), nome_urna=bruto.get("nomeUrna"))
     sinais += _sinais_gastos(analise_gastos)
     sinais += _sinais_emenda_campanha(dep, analise_gastos)
+    sinais += _sinais_gabinete(id_candidato)
+    sinais += _sinais_improbidade(id_candidato)
+    sinais += _sinais_2022(id_candidato)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)
