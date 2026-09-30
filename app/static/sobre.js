@@ -54,7 +54,7 @@ function htmlSobreProjeto() {
       <li><strong>Sem ligação com campanhas.</strong> O site não tem ligação com candidatos, partidos ou órgãos públicos e não recomenda em quem votar.</li>
     </ul>
     <h3>Quem fez</h3>
-    <p>Sou Gabriel Vasovino e criei o Voto Informado por conta própria, sem ligação com partidos, campanhas ou governos. A ideia é simples: a informação para escolher bem já é pública, só que está espalhada e difícil de ler, e dá para juntar tudo num lugar e explicar em linguagem de gente. William Akihiro Alves Aisawa ajudou a colocar o site no ar.</p>
+    <p>Sou Gabriel Vasovino e criei o Voto Informado por conta própria, sem ligação com partidos, campanhas ou governos. A ideia é simples: a informação para escolher bem já é pública, só que está espalhada e difícil de ler, e dá para juntar tudo num lugar e explicar em linguagem de gente.</p>
     <p>O projeto é independente e de <a href="${REPOSITORIO}" target="_blank" rel="noopener">código aberto</a>: qualquer pessoa pode conferir como cada número é calculado.</p>
     <h3>Apoie o projeto</h3>
     <p>O site é gratuito e continua sendo, mas tem custo de servidor e de manutenção. Se ele foi útil e você quiser ajudar a mantê-lo no ar, qualquer valor por Pix ajuda. É totalmente opcional.</p>
