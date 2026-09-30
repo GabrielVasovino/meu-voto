@@ -63,6 +63,15 @@ function linhaAfinidadeLista(g) {
   return `<div class="maj-afin"><span>Afinidade ${g.partidos.length > 1 ? "da federação" : "do partido"}</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
 }
 
+// Nota da lista: média de quem entraria, ajustada para lista pequena (uma pessoa só não decide a nota).
+function rotuloNotaLista(g) {
+  return `Nota geral ${g.partidos.length > 1 ? "da federação" : "do partido"}`;
+}
+
+function explicaNotaLista(ind) {
+  return `Média da nota geral de quem entraria. Numa lista pequena, a média é puxada para a de todas as listas${indicadoresAtual?.mediaGeral != null ? ` (${indicadoresAtual.mediaGeral})` : ""}, para uma pessoa só não decidir a nota. ${EXPLICA_NOTA_GERAL}`;
+}
+
 function htmlListaCartao(g, item) {
   const voto = estado.votos[item.slot];
   const minha = voto && voto.coligacao === g.id;
@@ -86,6 +95,7 @@ function htmlListaCartao(g, item) {
       </div>
     </header>
     ${linhaAfinidadeLista(g)}
+    <div class="maj-afin" data-nota-lista="${esc(g.id)}"><span>${rotuloNotaLista(g)}</span><small class="maj-carregando">calculando…</small></div>
     <p class="lista-rot">Quem ocuparia as vagas</p>
     <div class="rostos">${rostos}${mais}</div>
     ${disputa}
@@ -156,8 +166,8 @@ function desenharListas() {
         <select id="visao-ordem">
           <option value="padrao"${visaoListas.ordem === "padrao" ? " selected" : ""}>${visaoListas.modo === "pessoa" ? "Posição na lista" : "Número de vagas"}</option>
           ${comQuiz ? `<option value="afinidade"${visaoListas.ordem === "afinidade" ? " selected" : ""}>Maior afinidade com você</option>` : ""}
-          ${visaoListas.modo === "pessoa" ? `<option value="maior"${visaoListas.ordem === "maior" ? " selected" : ""}>Maior nota geral</option>
-          <option value="menor"${visaoListas.ordem === "menor" ? " selected" : ""}>Menor nota geral</option>` : ""}
+          <option value="maior"${visaoListas.ordem === "maior" ? " selected" : ""}>Maior nota geral</option>
+          <option value="menor"${visaoListas.ordem === "menor" ? " selected" : ""}>Menor nota geral</option>
         </select>
       </label>
       <div class="busca-listas">
@@ -171,7 +181,7 @@ function desenharListas() {
         <p>Os cartões mostram como ficariam as ${p.vagas} vagas se os votos de 2022 se repetissem com as federações de 2026. Toque numa pessoa para abrir a ficha, ou em "Ver os candidatos" para a lista completa.</p>`)}
       ${balao("Como ler os números", `<ul>
         <li><strong>Vagas</strong> é quantas cadeiras a lista teria se os votos de 2022 se repetissem.</li>
-        <li><strong>Nota geral</strong>, de 0 a 100, é de cada pessoa, não da lista: uma média da lista dependeria demais de quantas vagas ela tem, porque numa lista pequena uma só pessoa muda tudo. A nota junta a <strong>integridade</strong>, que parte de 100 e perde pontos por indício que vale conferir ou alerta sério, e o <strong>desempenho</strong>, que só existe para quem já tem mandato e compara presença, projetos aprovados, relatorias, projetos simbólicos e gastos com os colegas. A posição política não entra, porque isso depende da sua opinião.</li>
+        <li><strong>Nota geral da federação ou do partido</strong> é a média de quem entraria, ajustada: numa lista pequena, a média é puxada para a de todas as listas, porque ali uma só pessoa mudaria tudo. A <strong>nota geral</strong> de cada pessoa junta a <strong>integridade</strong>, que parte de 100 e perde pontos por indício que vale conferir ou alerta sério, e o <strong>desempenho</strong>, que só existe para quem já tem mandato e compara presença, projetos aprovados, relatorias, projetos simbólicos e gastos com os colegas. A posição política não entra, porque isso depende da sua opinião.</li>
         <li>O anel em volta da foto mostra a nota geral da pessoa: verde de 85 para cima, amarelo de 60 a 84 e vermelho abaixo de 60. A etiqueta azul no rosto é a afinidade de quem já é deputado federal com o seu questionário: a porcentagem das votações do questionário em que ele votou como você.</li>
       </ul>
       <p><button type="button" class="link-btn" data-abrir-sobre="metodologia">Ver a metodologia completa</button></p>`)}
@@ -233,6 +243,12 @@ function htmlIndicadoresCarregando(progresso) {
 
 function aplicarIndicadores() {
   if (!indicadoresAtual?.pronto) return;
+  document.querySelectorAll("[data-nota-lista]").forEach((el) => {
+    const ind = indicadoresAtual.grupos?.[el.dataset.notaLista];
+    const g = listasAtual?.p.grupos.find((x) => x.id === el.dataset.notaLista);
+    if (!g) return;
+    el.innerHTML = `<span>${rotuloNotaLista(g)}</span>${ind?.indiceAjustado == null ? `<small class="sem-afinidade">Sem dados</small>` : celulaNota(ind.indiceAjustado, explicaNotaLista(ind))}`;
+  });
   document.querySelectorAll(".lista-card[data-abrir-lista]").forEach((el) => {
     const g = indicadoresAtual.grupos?.[el.dataset.abrirLista];
     for (const [id, p] of Object.entries(g?.pessoas || {})) {
@@ -267,14 +283,14 @@ function desenharVisao() {
   if (!alvo || !listasAtual) return;
   const { p, item } = listasAtual;
   const comVaga = p.grupos.filter((g) => g.vagas > 0);
-  const semNotas = visaoListas.modo === "pessoa" && !["padrao", "afinidade"].includes(visaoListas.ordem) && !indicadoresAtual?.pronto
+  const semNotas = !["padrao", "afinidade"].includes(visaoListas.ordem) && !indicadoresAtual?.pronto
     ? `<p class="explica">As notas ainda estão sendo calculadas. A ordem se ajusta sozinha quando terminar.</p>` : "";
   if (visaoListas.modo === "pessoa") {
     alvo.innerHTML = semNotas + htmlVisaoPessoas(comVaga, item);
     return;
   }
-  // Listas não têm nota (só as pessoas): aqui só vale a ordem por vagas ou por afinidade.
-  const grupos = visaoListas.ordem === "afinidade" ? ordenarPorNota(comVaga, () => null, () => null, (g) => afinidadePartidos(g.partidos)) : comVaga;
+  const grupos = ordenarPorNota(comVaga, (g) => indicadoresAtual?.pronto ? indicadoresAtual.grupos?.[g.id]?.indiceAjustado ?? null : null,
+    (g) => indicadoresAtual?.grupos?.[g.id]?.integridade, (g) => afinidadePartidos(g.partidos));
   alvo.innerHTML = semNotas + `<div class="listas-grade">${grupos.map((g) => htmlListaCartao(g, item)).join("")}</div>`;
   aplicarIndicadores();
   aplicarPerfis();
@@ -475,6 +491,7 @@ function htmlResumoLista(g, ind, perfil, entrariam) {
   return `<section class="resumo-lista">
     <h3>Quem entraria, em resumo</h3>
     ${afinidade}
+    ${linhaNota(rotuloNotaLista(g), ind.indiceAjustado, { titulo: explicaNotaLista(ind) })}
     ${cabeca ? `<p class="resumo-frase">${cabeca}</p>` : ""}
     <details class="mais resumo-detalhes"><summary>Ver os avisos de cada um</summary>
       <p class="analise-texto">${mandato}${perfil ? ` ${textoPerfil(perfil)}` : ""}</p>

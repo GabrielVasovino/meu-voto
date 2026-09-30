@@ -97,8 +97,8 @@ function htmlSobreMetodologia() {
     <h3>Nota final de cada pessoa</h3>
     <div class="sobre-formula">Sem mandato: nota = integridade<br>Com mandato: nota = integridade + 0,4 × (desempenho − 50), entre 0 e 100</div>
     <p>Assim, o desempenho soma ou tira no máximo 20 pontos, e quem está na média não ganha nem perde. Ter mandato não pesa contra ninguém.</p>
-    <h3>Por que as listas não têm nota</h3>
-    <p>Na tela de deputados, a nota é sempre de cada pessoa, e não da lista (partido ou federação). Uma média da lista dependeria demais do tamanho dela: numa lista que elege uma ou duas pessoas, um só candidato com avisos derruba a média, enquanto numa lista grande ele quase não pesa. Em vez disso, cada lista mostra quantas das pessoas que entrariam têm algo para conferir, e o anel em volta de cada foto mostra a nota da pessoa.</p>
+    <h3>Nota da federação ou do partido</h3>
+    <p>Na tela de deputados, cada lista tem a média da nota geral de quem ocuparia as vagas pela estimativa, porque é esse o grupo que o seu voto ajuda a eleger. Numa lista que elege uma ou duas pessoas, um só candidato com avisos derrubaria a média; por isso ela é ajustada como se cada lista tivesse mais 5 pessoas com a nota média de todas as listas do estado. Numa lista grande o ajuste quase não muda nada; numa pequena, evita que uma pessoa só decida a nota.</p>
     <h3>Estimativa de vagas para deputado</h3>
     <p>Não é previsão. A conta repete os votos de 2022 com as regras e os partidos de 2026:</p>
     <ol>

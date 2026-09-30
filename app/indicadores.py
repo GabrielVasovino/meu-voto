@@ -117,6 +117,24 @@ def _calcular(uf, cargo):
     return {"geradoEm": time.strftime("%Y-%m-%d %H:%M"), "calculo": CALCULO, "grupos": grupos}
 
 
+# Nota da lista: média de quem entraria, puxada para a média de todas as listas como se cada lista tivesse mais
+# PESO_MEDIA pessoas "médias". Numa lista grande quase não muda; numa lista de 1 ou 2 vagas, uma pessoa só não
+# decide a nota sozinha.
+PESO_MEDIA = 5
+
+
+def _ajustar(dados):
+    notas = [p["nota"] for g in dados.get("grupos", {}).values() for p in g["pessoas"].values() if p.get("nota") is not None]
+    if not notas:
+        return dados
+    media = sum(notas) / len(notas)
+    for g in dados["grupos"].values():
+        ns = [p["nota"] for p in g["pessoas"].values() if p.get("nota") is not None]
+        g["indiceAjustado"] = round((sum(ns) + PESO_MEDIA * media) / (len(ns) + PESO_MEDIA)) if ns else None
+    dados["mediaGeral"] = round(media)
+    return dados
+
+
 def _rodar(uf, cargo):
     chave = (uf, cargo)
     try:
@@ -133,7 +151,7 @@ def _rodar(uf, cargo):
 def obter(uf, cargo):
     """Devolve os indicadores prontos; se não houver (ou estiverem velhos), dispara o cálculo em segundo plano."""
     arq = _arquivo(uf, cargo)
-    dados = json.loads(arq.read_text(encoding="utf-8")) if arq.exists() else None
+    dados = _ajustar(json.loads(arq.read_text(encoding="utf-8"))) if arq.exists() else None
     # Também refaz quando uma base usada nos alertas ficou pronta ou foi atualizada depois do último cálculo
     # (ex.: o índice de sócios da Receita, que no primeiro dia do servidor só fica pronto horas depois).
     bases = [gastos._banco(), empresas._arquivo(), sancoes._arquivo(), punicoes._arquivo()]
