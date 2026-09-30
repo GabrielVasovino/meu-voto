@@ -1,7 +1,7 @@
 """Indicadores de qualidade de quem ocuparia as vagas de cada lista (deputados).
 
 Para cada pessoa que, pela estimativa, ocuparia uma vaga:
-- integridade (0 a 100): começa em 100; cada ponto "vale conferir" tira 20 (gasto concentrado, 10) e cada
+- integridade (0 a 100): começa em 100; cada ponto "vale conferir" tira 20 (gasto concentrado e empresa nova, 10) e cada
   alerta sério tira 50. Usa só dados locais (TSE, trajetória, gastos de campanha e
   emendas), sem consultar a Receita, para caber no cálculo do estado inteiro;
 - desempenho (0 a 100), para quem já tem mandato de deputado: na Câmara, a posição em
@@ -32,7 +32,7 @@ import tse
 
 TTL = 12 * tse.HORA
 # Muda quando a regra da nota muda, para o cálculo guardado ser refeito na hora.
-CALCULO = 2
+CALCULO = 3
 
 _estado = {}  # (uf, cargo) -> {"etapa", "feitos", "total"}
 _rodando = set()

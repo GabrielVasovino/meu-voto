@@ -739,9 +739,10 @@ def sancoes_empresa(cnpj):
 
 
 PENALIDADE = {"atencao": 20, "alerta": 50}
-# Avisos que pesam menos que o normal: concentrar gastos num fornecedor costuma ter explicação simples
-# (uma agência que cuida de toda a campanha), então tira metade.
-PENALIDADE_TITULO = {"Gasto concentrado em um fornecedor": 10}
+# Avisos que pesam menos que o normal, porque costumam ter explicação simples: concentrar gastos num fornecedor
+# (uma agência que cuida de toda a campanha) e contratar empresa aberta pouco antes da campanha. Tiram metade.
+# (Empresa aberta às vésperas que ficou com grande parte dos gastos continua alerta sério.)
+PENALIDADE_TITULO = {"Gasto concentrado em um fornecedor": 10, "Empresa aberta pouco antes da campanha": 10}
 
 
 def pontos(s):
@@ -750,7 +751,7 @@ def pontos(s):
 
 
 def integridade(sinais):
-    """Começa em 100; cada ponto que vale conferir tira 20 (gasto concentrado, 10) e cada alerta sério tira 50.
+    """Começa em 100; cada ponto que vale conferir tira 20 (gasto concentrado e empresa nova, 10) e cada alerta sério tira 50.
 
     Presença e gasto da cota falam de desempenho no mandato e já entram lá, então ficam de fora aqui.
     """
