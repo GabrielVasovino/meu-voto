@@ -578,7 +578,7 @@ CONFERIR_BASES_A_CADA = 3600
 DESCRICAO_BASES = (
     (gastos, gastos._banco, "Prestação de contas das campanhas de 2026 e 2022", "TSE"),
     (empresas, empresas._arquivo, "Empresas em que cada candidato é sócio", "Receita Federal"),
-    (sancoes, sancoes._arquivo, "Cadastros de punidos (CEIS, CNEP e CEAF)", "CGU, Portal da Transparência"),
+    (sancoes, sancoes._arquivo, "Cadastros de punidos (CEIS, CNEP, CEAF e CEPIM) e acordos de leniência", "CGU, Portal da Transparência"),
     (punicoes, punicoes._arquivo, "Contas irregulares, lista suja do trabalho escravo e embargos ambientais",
      "TCU, Ministério do Trabalho e Ibama"),
     (camara, camara._arquivo_resumo, "Votações, presença, projetos e cota dos deputados federais", "Câmara dos Deputados"),

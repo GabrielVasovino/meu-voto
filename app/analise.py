@@ -511,7 +511,7 @@ def _sinais_sancoes(cpf, contas, nome):
     if not s:
         s.append(_sinal("ok", "Nada encontrado nos cadastros de sanções",
                         "Nem o candidato nem os principais fornecedores aparecem nos cadastros nacionais de punidos "
-                        f"(CEIS, CNEP e CEAF, atualizados em {sancoes.status()['geradoEm']}).",
+                        f"(CEIS, CNEP, CEAF e CEPIM) e acordos de leniência, atualizados em {sancoes.status()['geradoEm']}).",
                         "Portal da Transparência (arquivos da CGU)"))
     return s
 
@@ -550,7 +550,8 @@ def _sinais_empresas(lista, nome_dep=None, ja_sinalizadas=frozenset()):
         if e.get("sancoes"):
             siglas = sorted({x["sigla"] for x in e["sancoes"]})
             s.append(_sinal("atencao", "Empresa do candidato está num cadastro de punidos",
-                            f"{nome} aparece no {' e no '.join(siglas)}, cadastro nacional de empresas punidas.",
+                            f"{nome} aparece no {' e no '.join(siglas)}: " + "; ".join(dict.fromkeys(x["sancao"] for x in e["sancoes"] if x.get("sancao")))
+                            + ". São cadastros nacionais de empresas e entidades punidas ou impedidas de receber dinheiro público.",
                             FONTE_RECEITA + " e CGU"))
     return s
 

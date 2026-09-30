@@ -1,4 +1,5 @@
-"""Cadastros de punidos do governo federal (CEIS, CNEP e CEAF), pelos arquivos abertos da CGU.
+"""Cadastros de punidos do governo federal (CEIS, CNEP, CEAF e CEPIM) e acordos de leniência, pelos arquivos abertos
+da CGU.
 
 Os arquivos são baixados do Portal da Transparência sem chave, uma vez por dia, e resumidos num índice
 por CPF/CNPJ. Assim a checagem funciona para qualquer pessoa, sem a chave pessoal da API.
@@ -26,7 +27,10 @@ BASES = {
     "ceis": "Cadastro de empresas e pessoas proibidas de contratar com o governo (CEIS)",
     "cnep": "Cadastro de punidos pela Lei Anticorrupção (CNEP)",
     "ceaf": "Cadastro de expulsos do serviço público federal (CEAF)",
+    "cepim": "Cadastro de entidades sem fins lucrativos impedidas de receber verba federal (CEPIM)",
+    "acordos-leniencia": "Acordos de leniência: empresas que admitiram atos lesivos contra a administração pública",
 }
+SIGLAS = {"acordos-leniencia": "Leniência"}
 
 _indice = None
 _lock = threading.Lock()
@@ -71,7 +75,25 @@ def _baixar(base):
     raise RuntimeError(f"Arquivo do {base.upper()} não encontrado nos últimos 8 dias")
 
 
+def _doc(base, linha):
+    if base == "cepim":
+        return linha.get("CNPJ ENTIDADE") or ""
+    if base == "acordos-leniencia":
+        return linha.get("CNPJ DO SANCIONADO") or ""
+    return linha.get("CPF OU CNPJ DO SANCIONADO") or ""
+
+
 def _registro(base, linha):
+    if base == "cepim":
+        return {"cadastro": BASES[base], "sigla": "CEPIM", "nome": linha.get("NOME ENTIDADE") or "",
+                "sancao": f"Impedida de receber verba federal: {(linha.get('MOTIVO DO IMPEDIMENTO') or '').lower()}",
+                "orgao": linha.get("ÓRGÃO CONCEDENTE") or "", "inicio": "", "fim": ""}
+    if base == "acordos-leniencia":
+        razao = next((v for k, v in linha.items() if k.startswith("RAZÃO SOCIAL")), "")
+        return {"cadastro": BASES[base], "sigla": SIGLAS[base], "nome": razao or "",
+                "sancao": f"Acordo de leniência ({(linha.get('SITUAÇÃO DO ACORDO DE LENIÊNICA') or '').lower()})",
+                "orgao": linha.get("ÓRGÃO SANCIONADOR") or "", "inicio": linha.get("DATA DE INÍCIO DO ACORDO") or "",
+                "fim": linha.get("DATA DE FIM DO ACORDO") or ""}
     return {
         "cadastro": BASES[base],
         "sigla": base.upper(),
@@ -88,12 +110,13 @@ def _preparar():
         _estado.update(etapa="baixando", erro=None)
         docs, mascarados, datas = {}, {}, {}
         for base in BASES:
+            time.sleep(3)  # o portal recusa downloads em sequência rápida
             dia, texto = _baixar(base)
             datas[base] = dia
             vistos = set()
             for linha in csv.DictReader(io.StringIO(texto), delimiter=";"):
-                doc = linha.get("CPF OU CNPJ DO SANCIONADO") or ""
-                chave_repetida = (linha.get("CÓDIGO DA SANÇÃO"), doc)
+                doc = _doc(base, linha)
+                chave_repetida = (linha.get("CÓDIGO DA SANÇÃO") or linha.get("ID DO ACORDO") or linha.get("NÚMERO CONVÊNIO"), doc)
                 if chave_repetida in vistos:  # o CEAF repete a mesma sanção em várias linhas
                     continue
                 vistos.add(chave_repetida)
