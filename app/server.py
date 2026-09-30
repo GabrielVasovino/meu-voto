@@ -31,6 +31,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 import alesp
+import auxilio
 import analise
 import camara
 import cassacoes
@@ -570,7 +571,7 @@ def _proposicao(id_proposicao):
 
 # Bases de dados públicos que se refazem sozinhas. Cada iniciar() só baixa de novo se a cópia estiver velha,
 # faltando ou se a última tentativa falhou, e nunca roda duas vezes ao mesmo tempo.
-BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes, senado)
+BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes, senado, auxilio)
 CONFERIR_BASES_A_CADA = 3600
 
 
@@ -592,6 +593,7 @@ DESCRICAO_BASES = (
     (pgfn, lambda: pgfn.PACOTE, "Dívida ativa com a União de candidatos e suas empresas", "PGFN"),
     (cassacoes, lambda: cassacoes.PACOTE, "Cassações e registros negados em eleições de 2014 a 2024", "TSE"),
     (senado, senado._arquivo, "Presença dos senadores nas votações do plenário", "Senado Federal"),
+    (auxilio, lambda: auxilio.PACOTE, "Auxílio Emergencial recebido por candidatos", "Portal da Transparência"),
 )
 
 
@@ -605,7 +607,7 @@ def _status_bases():
             "atualizando": st.get("etapa") not in ("pronto", "parado", "erro"),
             "falhou": st.get("etapa") == "erro",
             # O índice da Receita chega pronto com o site: vale a data em que foi montado, não a da cópia.
-            "atualizadoEm": (st.get("geradoEm") if modulo in (empresas, improbidade, contas_anteriores, contratos, pgfn, cassacoes) else None)
+            "atualizadoEm": (st.get("geradoEm") if modulo in (empresas, improbidade, contas_anteriores, contratos, pgfn, cassacoes, auxilio) else None)
             or (datetime.fromtimestamp(arq.stat().st_mtime).strftime("%d/%m/%Y %H:%M") if arq.exists() else None),
         })
     return saida

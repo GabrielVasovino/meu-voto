@@ -374,7 +374,7 @@ function htmlBlocoPontuacao(p) {
       <h4>Desempenho no mandato ${p.desempenho != null ? `<b>${p.desempenho}<small>/100</small></b>` : ""}</h4>
       ${p.criterios
         ? `<p class="explica">Posição entre os ${casa} em cada critério: 50 é o deputado típico, 100 é o melhor.</p>
-          <div class="notas-lista">${p.criterios.map((c) => linhaPosicao(c.rotulo + (c.peso > 1 ? " <small>(vale em dobro)</small>" : ""), Math.round(100 * c.valor))).join("")}</div>`
+          <div class="notas-lista">${p.criterios.map((c) => linhaPosicao(c.rotulo, Math.round(100 * c.valor))).join("")}</div>`
         : `<p class="explica">Só existe para quem já é deputado federal ou deputado estadual em São Paulo, onde há dados abertos de presença, projetos e gastos.</p>`}
     </div>`;
   return secao("Nota geral", `${notas}${conta}<div class="nota-partes">${integridade}${desempenho}</div>`, "", "bloco-pontuacao");

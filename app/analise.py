@@ -15,6 +15,7 @@ from urllib.parse import urlencode
 from curl_cffi import requests
 
 import alesp
+import auxilio
 import camara
 import cassacoes
 import contas_anteriores
@@ -635,6 +636,27 @@ def _sinais_improbidade(id_candidato):
 DOACAO_ALTA_ASSESSOR = 10_000
 
 
+PATRIMONIO_AUXILIO = 500_000
+
+
+def _sinais_auxilio(id_candidato, traj):
+    """Auxílio Emergencial recebido por quem declarou ao TSE, perto daquela época, patrimônio de R$ 500 mil ou mais.
+    Quem recebeu com patrimônio menor não aparece: tinha direito, e mostrar só exporia a pessoa."""
+    a = auxilio.do_candidato(id_candidato)
+    linhas = [l for l in (traj or {}).get("linhas") or [] if 2018 <= l.get("ano", 0) <= 2022 and l.get("bens")]
+    if not a or not linhas:
+        return []
+    decl = min(linhas, key=lambda l: (abs(l["ano"] - 2020), l["ano"]))
+    if decl["bens"] < PATRIMONIO_AUXILIO:
+        return []
+    quando = listar("julho de 2020" if m == "2020-07" else "junho de 2021" for m in a["meses"])
+    return [_sinal("atencao", "Recebeu Auxílio Emergencial com patrimônio alto",
+                   f"Aparece entre os beneficiários do Auxílio Emergencial em {quando}. Em {decl['ano']}, declarou ao TSE "
+                   f"bens de {_brl0(decl['bens'])}. O auxílio era para quem tinha renda baixa; ter patrimônio alto não "
+                   "tirava o direito por si só, mas é o padrão que a CGU e o TCU apontaram em pagamentos indevidos.",
+                   "Portal da Transparência (Auxílio Emergencial) e TSE", categoria="beneficio", pontos=10)]
+
+
 def _sinais_senado(id_candidato):
     """Presença nas votações nominais do Senado, para quem é senador. Fala do mandato: não mexe na integridade."""
     p = senado.presenca(id_candidato)
@@ -748,21 +770,24 @@ def _sinais_anteriores(id_candidato):
     anos = contas_anteriores.do_candidato(id_candidato)
     if not anos:
         return []
-    partes, pontos = [], 0
+    partes, pontos, tipos = [], 0, []
     for ano in sorted(anos, reverse=True):
         c = anos[ano]
         frases = []
         if c["doouRecebeu"]:
             pontos += 10
+            tipos.append("doador que recebeu mais do que doou")
             lista = c["doouRecebeu"]
             frases.append("doaram R$ 5 mil ou mais e receberam da campanha mais do que doaram: " + "; ".join(
                 f"{x['nome']} doou {_brl0(x['doou'])} e recebeu {_brl0(x['recebeu'])}" for x in lista[:3])
                 + (f"; e mais {len(lista) - 3}" if len(lista) > 3 else ""))
         if c["empresaPropria"]:
             pontos += 10
+            tipos.append("campanha pagou empresa do próprio candidato")
             frases.append("a campanha pagou empresa do próprio candidato: "
                           + _lista_valores([(x["nome"], x["valor"]) for x in c["empresaPropria"]]))
         if c["assessores"]:
+            tipos.append("doação de assessor do gabinete")
             if max(x["valor"] for x in c["assessores"]) >= DOACAO_ALTA_ASSESSOR:
                 pontos += 10
             frases.append("pessoas que trabalham ou trabalharam no gabinete doaram: "
@@ -771,7 +796,9 @@ def _sinais_anteriores(id_candidato):
         partes.append(f"Em {ano}, disputou{' para ' + cargo if cargo else ''}{' em ' + c['uf'] if c.get('uf') else ''}: "
                       + "; ".join(frases) + ".")
     pontos = min(pontos, 20)
-    return [_sinal("atencao" if pontos else "info", "Nas campanhas anteriores",
+    # O título precisa dizer o que foi achado e quando, porque aparece sozinho na lista de descontos da nota.
+    titulo = f"{'Campanha' if len(anos) == 1 else 'Campanhas'} de {listar(sorted(anos))}: {listar(dict.fromkeys(tipos))}"
+    return [_sinal("atencao" if pontos else "info", titulo[0].upper() + titulo[1:],
                    " ".join(partes) + ("" if pontos else " Nada disso tira pontos."),
                    "TSE (prestação de contas de 2014, 2018 e 2022)", categoria="anteriores", pontos=pontos or None)]
 
@@ -1392,6 +1419,7 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_divida(id_candidato)
     sinais += _sinais_cassacoes(id_candidato)
     sinais += _sinais_senado(id_candidato)
+    sinais += _sinais_auxilio(id_candidato, traj)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)
