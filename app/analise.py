@@ -1060,11 +1060,16 @@ def integridade(sinais):
     return max(0, 100 - sum(pontos(s) for s in sinais if s.get("categoria") != "mandato"))
 
 
-def nota_pessoa(integ, desempenho):
-    """A integridade; para quem tem mandato, o desempenho soma ou tira até 20 pontos em relação ao deputado típico."""
+CARGOS_DEPUTADO = (6, 7, 8)
+
+
+def nota_pessoa(integ, desempenho, cargo=None):
+    """A integridade; na disputa para deputado, o desempenho de quem já tem mandato soma ou tira até 20 pontos em
+    relação ao colega típico. Para Senado, governo e presidência a nota é só a integridade: ali o desempenho só existe
+    para alguns (senadores) e viraria um bônus que governadores, o presidente e quem nunca teve cargo não têm."""
     if integ is None:
         return None
-    ajuste = 0.4 * (desempenho - 50) if desempenho is not None else 0
+    ajuste = 0.4 * (desempenho - 50) if desempenho is not None and cargo in CARGOS_DEPUTADO else 0
     return round(min(100, max(0, integ + ajuste)))
 
 
@@ -1087,7 +1092,7 @@ def desempenho_de(dep, dep_est, id_candidato=None):
     return None, None, None
 
 
-def pontuacao(sinais, dep, dep_est, id_candidato=None):
+def pontuacao(sinais, dep, dep_est, id_candidato=None, cargo=None):
     d, casa, criterios = desempenho_de(dep, dep_est, id_candidato)
     integ = integridade(sinais)
     return {
@@ -1095,7 +1100,7 @@ def pontuacao(sinais, dep, dep_est, id_candidato=None):
         "desempenho": d["nota"] if d else None,
         "casa": casa,
         "criterios": criterios,
-        "nota": nota_pessoa(integ, d["nota"] if d else None),
+        "nota": nota_pessoa(integ, d["nota"] if d else None, cargo),
         "descontos": [{"titulo": x["titulo"], "nivel": x["nivel"], "pontos": pontos(x)}
                       for x in sinais if x["nivel"] in PENALIDADE and x.get("categoria") != "mandato"],
     }
@@ -1454,4 +1459,4 @@ def analisar(uf, cargo, id_candidato):
             "rede": {"pagas": de_candidatos or [], "pronto": de_candidatos is not None,
                      "minhas": [e for e in socio_de or [] if (e.get("outrasCampanhas") or {}).get("quantas")]},
             "patrimonioAnterior": {"ano": anteriores[-1]["ano"], "valor": anteriores[-1]["bens"]} if anteriores else None,
-            "sinais": sinais, "portalAtivo": portal_ativo, "pontuacao": pontuacao(sinais, dep, dep_est, id_candidato)}
+            "sinais": sinais, "portalAtivo": portal_ativo, "pontuacao": pontuacao(sinais, dep, dep_est, id_candidato, cargo)}

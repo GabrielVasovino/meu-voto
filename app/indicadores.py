@@ -8,7 +8,7 @@ Para cada pessoa que, pela estimativa, ocuparia uma vaga:
   relação aos colegas em presença, projetos aprovados, relatorias, projetos simbólicos,
   cota e emendas Pix; na ALESP, presença nas comissões, leis aprovadas, projetos
   simbólicos e verba de gabinete. Projeto simbólico pesa em dobro.
-A nota de cada pessoa é a integridade; para quem tem mandato, o desempenho soma ou tira
+A nota de cada pessoa é a integridade; na disputa para deputado, o desempenho de quem tem mandato soma ou tira
 até 20 pontos conforme esteja acima ou abaixo do deputado típico (quem está na média não
 ganha nem perde). Assim, ter mandato não pesa contra ninguém. O índice do grupo é a média
 dessas notas. Posição política não entra: isso é opinião, não qualidade.
@@ -32,7 +32,7 @@ import tse
 
 TTL = 12 * tse.HORA
 # Muda quando a regra da nota muda, para o cálculo guardado ser refeito na hora.
-CALCULO = 14
+CALCULO = 15
 
 _estado = {}  # (uf, cargo) -> {"etapa", "feitos", "total"}
 _rodando = set()
@@ -89,7 +89,7 @@ def _calcular(uf, cargo):
         d, casa, _ = analise.desempenho_de(dep, dep_est, c["id"])
         r["desempenho"] = d["nota"] if d else None
         r["casa"] = casa
-        r["nota"] = analise.nota_pessoa(r["integridade"], r["desempenho"])
+        r["nota"] = analise.nota_pessoa(r["integridade"], r["desempenho"], cargo)
         _estado[chave]["feitos"] += 1
         return grupo, c["id"], r
 

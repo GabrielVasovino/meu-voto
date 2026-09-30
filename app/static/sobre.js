@@ -109,7 +109,7 @@ function htmlSobreMetodologia() {
     <h3>Campanhas anteriores</h3>
     <p>Para quem também disputou em 2014, 2018 ou 2022, os mesmos cruzamentos são feitos com as contas dessas campanhas e aparecem juntos num aviso só, com o ano e o que foi achado no título (por exemplo, "Campanha de 2018: doador que recebeu mais do que doou"): doador que recebeu mais do que doou, empresa do próprio candidato paga pela campanha e doação de quem trabalha ou trabalhou no gabinete. Cada problema encontrado (por tipo e por ano) tira 10 pontos, no máximo 20 somando tudo. A pessoa é ligada entre as eleições pelo CPF.</p>
     <h3>Desempenho no mandato</h3>
-    <p>Vale só para quem já é deputado federal ou deputado estadual de São Paulo, que são as casas com dados abertos completos. Em cada critério, a pessoa é comparada com os colegas da mesma casa e recebe uma posição de 0 a 100, em que 50 é o deputado típico. O desempenho é a média dessas posições.</p>
+    <p>Vale para quem tem mandato na Câmara, no Senado, na ALESP ou na ALERJ, as casas com dados abertos suficientes. Aparece separado da nota geral. Em cada critério, a pessoa é comparada com os colegas da mesma casa e recebe uma posição de 0 a 100, em que 50 é o deputado típico. O desempenho é a média dessas posições.</p>
     <ul>
       <li><strong>Câmara dos Deputados:</strong> presença nas votações do plenário, projetos aprovados que mudam regras, relatorias, poucos projetos simbólicos (homenagens, datas e nomes de obras, com peso dobrado), economia na cota parlamentar e menos emendas Pix (as transferências especiais, que são mais difíceis de rastrear).</li>
       <li><strong>ALESP:</strong> presença nas comissões, leis aprovadas que mudam regras, poucos projetos simbólicos (com peso dobrado) e economia na verba de gabinete.</li>
@@ -117,8 +117,8 @@ function htmlSobreMetodologia() {
       <li><strong>ALERJ:</strong> faltas nas sessões (relatórios mensais de presença), leis aprovadas que mudam regras (de autoria ou coautoria) e poucos projetos simbólicos (com peso dobrado), desde fevereiro de 2023. A ALERJ não publica a verba de gabinete por deputado de um jeito que dê para ler, então esse critério fica de fora.</li>
     </ul>
     <h3>Nota final de cada pessoa</h3>
-    <div class="sobre-formula">Sem mandato: nota = integridade<br>Com mandato: nota = integridade + 0,4 × (desempenho − 50), entre 0 e 100</div>
-    <p>Assim, o desempenho soma ou tira no máximo 20 pontos, e quem está na média não ganha nem perde. Ter mandato não pesa contra ninguém.</p>
+    <div class="sobre-formula">Senado, governo e presidência: nota = integridade<br>Deputado federal e estadual: nota = integridade + 0,4 × (desempenho − 50), entre 0 e 100</div>
+    <p>Na disputa para deputado, o desempenho de quem já tem mandato soma ou tira no máximo 20 pontos, e quem está na média não ganha nem perde. Para Senado, governo e presidência, a nota geral é só a integridade: nessas disputas o desempenho só existe para quem é senador, e somá-lo daria um bônus que governadores, o presidente e quem nunca teve cargo não têm como receber. O desempenho dos senadores aparece à parte, na ficha.</p>
     <h3>Nota da federação ou do partido</h3>
     <p>Na tela de deputados, cada lista tem a média da nota geral de quem ocuparia as vagas pela estimativa, porque é esse o grupo que o seu voto ajuda a eleger. Numa lista que elege uma ou duas pessoas, um só candidato com avisos derrubaria a média; por isso ela é ajustada como se cada lista tivesse mais 5 pessoas com a nota média de todas as listas do estado. Numa lista grande o ajuste quase não muda nada; numa pequena, evita que uma pessoa só decida a nota.</p>
     <h3>Estimativa de vagas para deputado</h3>

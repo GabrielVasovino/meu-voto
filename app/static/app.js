@@ -718,7 +718,7 @@ function htmlAvisoEstimativa(extra = "") {
 
 // "Nota geral" é a nota que aparece nos cartões: a integridade e, para quem tem mandato de deputado, o desempenho.
 // Ao abrir a ficha ou a lista, aparecem as três (geral, integridade e desempenho), sempre nesta mesma linha.
-const EXPLICA_NOTA_GERAL = "Nota geral, de 0 a 100: junta a integridade (começa em 100 e perde pontos por indício encontrado nos dados públicos) e, para quem já é deputado, o desempenho no mandato.";
+const EXPLICA_NOTA_GERAL = "Nota geral, de 0 a 100: é a integridade, que começa em 100 e perde pontos por indício encontrado nos dados públicos. O desempenho de quem tem mandato aparece separado.";
 
 // Cor da nota geral, igual em todo o site (barra e anel em volta da foto): verde sem nada relevante, amarelo com
 // algo para conferir (um aviso tira 20 pontos) e vermelho com alerta sério ou vários avisos somados.

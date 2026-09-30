@@ -357,12 +357,14 @@ function htmlBlocoPontuacao(p) {
   // As três notas no mesmo formato das outras telas; embaixo, de onde sai cada uma.
   const notas = `<div class="notas-lista">
       ${linhaNota("<strong>Nota geral</strong>", p.nota, { titulo: EXPLICA_NOTA_GERAL })}
-      ${linhaNota("Integridade", p.integridade, { titulo: "Começa em 100 e perde 20 pontos por ponto para conferir e 50 por alerta sério." })}
-      ${linhaNota("Desempenho no mandato", p.desempenho, { vazio: "Não tem mandato de deputado", titulo: `Comparado aos outros ${casa}; 50 é o deputado típico.` })}
+      ${linhaNota("Integridade", p.integridade, { titulo: "Começa em 100 e perde pontos por ponto para conferir ou alerta sério." })}
+      ${linhaNota("Desempenho no mandato", p.desempenho, { vazio: "Sem mandato no Legislativo", titulo: `Comparado aos outros ${casa}; 50 é o colega típico.` })}
     </div>`;
-  const conta = p.desempenho != null
-    ? `<p class="nota-conta">Nota geral = integridade ${p.integridade} ${ajuste >= 0 ? "+" : "−"} ${Math.abs(ajuste)} do desempenho = <strong>${p.nota}</strong>. O desempenho soma ou tira até 20 pontos: acima do deputado típico soma, abaixo tira.</p>`
-    : `<p class="nota-conta">Sem mandato de deputado para avaliar, a nota geral é a própria integridade: <strong>${p.nota}</strong>.</p>`;
+  const conta = p.desempenho != null && ajuste !== 0
+    ? `<p class="nota-conta">Nota geral = integridade ${p.integridade} ${ajuste >= 0 ? "+" : "−"} ${Math.abs(ajuste)} do desempenho = <strong>${p.nota}</strong>. Na disputa para deputado, o desempenho soma ou tira até 20 pontos: acima do colega típico soma, abaixo tira.</p>`
+    : p.desempenho != null && ![6, 7, 8].includes(ficha.f?.codCargo)
+      ? `<p class="nota-conta">Para Senado, governo e presidência a nota geral é a integridade: <strong>${p.nota}</strong>. O desempenho no mandato aparece à parte, porque nessas disputas nem todos os candidatos têm mandato para ser comparado.</p>`
+      : `<p class="nota-conta">A nota geral é a integridade: <strong>${p.nota}</strong>.</p>`;
   const integridade = `<div class="nota-parte">
       <h4>Integridade <b>${p.integridade}<small>/100</small></b></h4>
       <p class="explica">Começa em 100. Cada ponto para conferir tira 20 e cada alerta sério tira 50.</p>
