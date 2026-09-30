@@ -690,7 +690,13 @@ def _sinais_gabinete(id_candidato):
                 pago[n] = pago.get(n, 0) + (valor or 0)
     finally:
         c.close()
-    onde = " e ".join({"Senado": "no Senado", "Câmara": "na Câmara", "ALESP": "na ALESP"}[x] for x in g["casas"])
+    onde = " e ".join({"Senado": "no Senado", "Câmara": "na Câmara"}.get(x, f"na {x}") for x in g["casas"])
+
+    def com_salario(n, v):
+        # Onde a assembleia publica o salário (ALERJ, ALEP), mostra quantos salários a doação representa.
+        sal = equipe[n].get("salario")
+        vezes = f", cerca de {v / sal:.0f} {'salário' if round(v / sal) == 1 else 'salários'}" if sal and v >= sal else ""
+        return (f"{equipe[n]['nome']}{vezes}", v)
     s = []
     if doou:
         # Metade das doações de assessores é de até R$ 3 mil e 9 em cada 10 ficam até R$ 10 mil; acima disso, a doação
@@ -699,7 +705,7 @@ def _sinais_gabinete(id_candidato):
         s.append(_sinal("atencao" if alta else "info", "Assessores do gabinete doaram para a campanha",
                         f"{len(doou)} {'pessoa que trabalha ou trabalhou' if len(doou) == 1 else 'pessoas que trabalham ou trabalharam'} "
                         f"no gabinete {onde} {'doou' if len(doou) == 1 else 'doaram'} {_brl0(sum(doou.values()))} para esta campanha: "
-                        f"{_lista_valores([(equipe[n]['nome'], v) for n, v in doou.items()])}. Doar para o chefe é permitido e comum. "
+                        f"{_lista_valores([com_salario(n, v) for n, v in doou.items()])}. Doar para o chefe é permitido e comum. "
                         "Vale olhar quando o valor é alto perto do salário de um assessor, porque devolver parte do salário ao "
                         "político (a \"rachadinha\") é crime."
                         + (f" Aqui, ao menos uma doação passa de {_brl0(DOACAO_ALTA_ASSESSOR)}, mais do que um mês de salário "
