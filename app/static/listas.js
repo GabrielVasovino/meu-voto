@@ -412,7 +412,7 @@ function linhaCandidato(c, g, item) {
       ${textoAfinidadePessoa(c.id) ? `<span class="cand-linha-afin">${textoAfinidadePessoa(c.id)}.</span>` : ""}
       ${htmlAvisosPessoa(g, c.id)}
     </div>
-    ${c.forca != null ? `<div class="forca" title="Força estimada, de 0 a 100: junta a maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e o dinheiro arrecadado em 2026. Define a ordem da lista."><span class="forca-rot">Força</span><strong>${Math.round(c.forca)}</strong><span class="trilho"><span class="cheio" style="width:${c.forca}%"></span></span><small>votos + dinheiro</small></div>` : ""}
+    ${c.forca != null ? `<span class="forca" title="Junta a maior votação recente (deputado em 2022 ou vereador e prefeito em 2024) e o dinheiro arrecadado em 2026. É o que define a ordem da lista.">Força <strong>${Math.round(c.forca)}</strong></span>` : ""}
     <div class="cand-linha-acoes">${acao}</div>
   </li>`;
 }
