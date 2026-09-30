@@ -535,12 +535,19 @@ function classeChance(chance) {
 }
 
 // Desenha o conteúdo do cargo em ajuda.cargo (quem escolhe o cargo é a jornada).
-function montarAjuda() {
+// Com manter = true (ex.: depois de pôr alguém na cédula), redesenha sem apagar a tela nem voltar ao topo.
+function montarAjuda(manter = false) {
   const itens = cargosAjuda();
   if (!itens.some((i) => i.cargo === ajuda.cargo)) ajuda.cargo = 6;
   const item = itens.find((i) => i.cargo === ajuda.cargo);
-  if (item.proporcional) carregarProporcional(item);
-  else carregarMajoritario(item);
+  if (item.proporcional) carregarProporcional(item, manter);
+  else carregarMajoritario(item, false, manter);
+}
+
+// Guarda onde a pessoa estava na página; a função devolvida volta para lá depois de redesenhar.
+function guardarRolagem() {
+  const y = window.scrollY;
+  return () => window.scrollTo({ top: y, behavior: "instant" });
 }
 
 function htmlMetodo(p) {
@@ -568,9 +575,10 @@ const filtroMaj = (() => {
   catch { return { ordem: "nome", minimo: 0 }; }
 })();
 
-async function carregarMajoritario(item, reordenado = false) {
+async function carregarMajoritario(item, reordenado = false, manter = false) {
   const corpo = $("#ajuda-corpo");
-  corpo.innerHTML = `<p class="carregando">Buscando candidatos…</p>`;
+  const voltar = manter ? guardarRolagem() : null;
+  if (!manter) corpo.innerHTML = `<p class="carregando">Buscando candidatos…</p>`;
   let lista;
   try {
     lista = (await api(`/api/candidatos?uf=${ufConsulta(item.cargo)}&cargo=${item.cargo}`)).candidatos;
@@ -625,7 +633,7 @@ async function carregarMajoritario(item, reordenado = false) {
         </div>
         <span class="maj-num" title="Número na urna">${esc(c.numero)}</span>
       </header>
-      ${comAfinidade ? `<div class="maj-afin"><span>Afinidade do partido com o seu questionário</span>${celulaAfinidade(af)}</div>` : ""}
+      ${comAfinidade ? `<div class="maj-afin"><span>Afinidade do partido</span>${celulaAfinidade(af)}</div>` : ""}
       <div class="maj-afin maj-integ" data-integ="${c.id}"><span>Nota geral</span><small class="maj-carregando">calculando…</small></div>
       <dl class="maj-resumo" data-resumo="${c.id}"><div class="maj-carregando">Carregando o resumo…</div></dl>
       <p class="maj-sinais" data-sinais="${c.id}"></p>
@@ -679,14 +687,15 @@ async function carregarMajoritario(item, reordenado = false) {
     let chave = item.slot;
     if (item.cargo === 5 && estado.votos.senador_1) chave = "senador_2";
     escolher(slots.find((s) => s.key === chave), c);
-    carregarMajoritario(item);
+    carregarMajoritario(item, false, true);
   }));
   corpo.querySelectorAll("[data-retirar]").forEach((b) => b.addEventListener("click", () => {
     retirarVoto(chaveDoVoto(+b.dataset.retirar));
-    carregarMajoritario(item);
+    carregarMajoritario(item, false, true);
   }));
+  voltar?.();
   preencherResumos(item, uf, validos.concat(comProblema), vice).then(() => {
-    if (faltaNota && !reordenado && filtroMaj.ordem === "integridade" && ajuda.cargo === item.cargo) carregarMajoritario(item, true);
+    if (faltaNota && !reordenado && filtroMaj.ordem === "integridade" && ajuda.cargo === item.cargo) carregarMajoritario(item, true, true);
   });
 }
 

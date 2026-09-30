@@ -60,7 +60,7 @@ function rosto(c, meuId) {
 // Afinidade da lista com o questionário, na mesma linha usada nos cartões de Senado, Governo e Presidência.
 function linhaAfinidadeLista(g) {
   if (respostasQuiz() < 3 || !quizDados) return "";
-  return `<div class="maj-afin"><span>Afinidade da lista com o seu questionário</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
+  return `<div class="maj-afin"><span>Afinidade ${g.partidos.length > 1 ? "da federação" : "do partido"}</span>${celulaAfinidade(afinidadePartidos(g.partidos))}</div>`;
 }
 
 function htmlListaCartao(g, item) {
@@ -109,10 +109,11 @@ function htmlListaSemVaga(g, item) {
   </article>`;
 }
 
-async function carregarProporcional(item) {
+async function carregarProporcional(item, manter = false) {
   const corpo = $("#ajuda-corpo");
+  const voltar = manter && listasAtual ? guardarRolagem() : null;
   // Numa nova tentativa, a lista de passos continua na tela em vez de piscar.
-  if (!corpo.querySelector(".espera")) corpo.innerHTML = `<p class="carregando">Montando as listas com os votos de 2022…</p>`;
+  if (!voltar && !corpo.querySelector(".espera")) corpo.innerHTML = `<p class="carregando">Montando as listas com os votos de 2022…</p>`;
   let p;
   try {
     // A afinidade do questionário (se respondido) é carregada junto, para os cartões já nascerem com ela.
@@ -131,6 +132,7 @@ async function carregarProporcional(item) {
   fimEspera(`listas-${estado.uf}`);
   listasAtual = { p, item };
   desenharListas();
+  voltar?.();
 }
 
 // Balão de informação: um botão pequeno que abre a explicação por cima, sem empurrar a tela.
@@ -365,11 +367,15 @@ async function carregarIndicadores(item) {
 
 // ---------- lista completa (diálogo) ----------
 
-async function abrirLista(idGrupo) {
+// Com manter = true (depois de pôr ou tirar alguém da cédula), redesenha no mesmo ponto da rolagem.
+async function abrirLista(idGrupo, manter = false) {
   const { p, item } = listasAtual;
   const g = p.grupos.find((x) => x.id === idGrupo);
   const dlg = $("#lista-dlg");
-  $("#lista-dlg-corpo").innerHTML = `<p class="carregando">Carregando os candidatos…</p>`;
+  const rolagem = manter ? $("#lista-dlg .lista-dlg-rolagem")?.scrollTop : null;
+  // Faixas que a pessoa abriu ou fechou continuam assim depois de redesenhar.
+  const abertos = manter ? [...dlg.querySelectorAll("details")].map((d) => d.open) : null;
+  if (rolagem == null) $("#lista-dlg-corpo").innerHTML = `<p class="carregando">Carregando os candidatos…</p>`;
   if (!dlg.open) dlg.showModal();
   let r;
   try {
@@ -380,6 +386,9 @@ async function abrirLista(idGrupo) {
   }
   dlg.dataset.grupo = idGrupo;
   $("#lista-dlg-corpo").innerHTML = htmlListaCompleta(g, r, item);
+  const novos = [...dlg.querySelectorAll("details")];
+  if (abertos?.length === novos.length) novos.forEach((d, i) => { d.open = abertos[i]; });
+  if (rolagem != null) $("#lista-dlg .lista-dlg-rolagem").scrollTop = rolagem;
   carregarRedeLista(idGrupo, item);
 }
 
@@ -596,8 +605,10 @@ async function carregarRedeLista(idGrupo, item) {
         const c = r.candidatos.find((x) => x.id === +por.dataset.listaCedula);
         escolher(slots.find((s) => s.key === item.slot), { ...c, coligacao: idGrupo });
       }
-      abrirLista(idGrupo);
+      abrirLista(idGrupo, true);
+      const voltar = guardarRolagem();
       desenharListas();
+      voltar();
     }
   });
 })();

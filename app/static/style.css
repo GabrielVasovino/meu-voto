@@ -1635,8 +1635,17 @@ dialog.sobre-dlg { width: min(820px, 100vw - 24px); }
 .guia-destaque { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 12px 14px; margin: 12px 0; }
 .guia-destaque p:last-child { margin-bottom: 0; }
 
-/* Nota geral e afinidade uma embaixo da outra: barras do mesmo tamanho e números na mesma coluna. */
-.maj-afin > .afin-mini { flex: none; width: 210px; min-width: 0; }
+/* Nota geral e afinidade uma embaixo da outra: a barra fica numa coluna de mesma largura em todas as linhas,
+   que encolhe junto com o cartão (nunca passa da borda), e o rótulo quebra linha se faltar espaço. */
+.maj-afin:has(> .afin-mini, > .sem-afinidade) { display: grid; grid-template-columns: minmax(0, 1fr) min(210px, 62%); }
+.maj-afin > .afin-mini { width: 100%; min-width: 0; }
+.maj-afin > .afin-mini .trilho { min-width: 24px; }
 .maj-afin > .afin-mini b { flex: none; width: 7.2em; text-align: right; white-space: nowrap; }
-@media (max-width: 400px) { .maj-afin > .afin-mini { width: 170px; } .maj-afin > .afin-mini b { width: 6.6em; } }
 @media (max-width: 760px) { .forca { justify-self: start; } }
+
+/* Tabela de fornecedores da ficha: respiro entre as colunas, principalmente entre "Recebeu" e "Experiência". */
+table.lista.tabela-fornecedores th, table.lista.tabela-fornecedores td { padding-left: 12px; padding-right: 12px; }
+table.lista.tabela-fornecedores th:first-child, table.lista.tabela-fornecedores td:first-child { padding-left: 0; }
+table.lista.tabela-fornecedores th.num, table.lista.tabela-fornecedores td.num { padding-right: 28px; }
+table.lista.tabela-fornecedores td:nth-child(3) { min-width: 9em; }
+.maj-afin > .sem-afinidade { text-align: right; }

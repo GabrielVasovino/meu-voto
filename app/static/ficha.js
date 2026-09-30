@@ -1452,7 +1452,7 @@ function irPara(destino, sub) {
         });
       }
       $("#ficha-cab").innerHTML = htmlCabecalho(f);
-      if (!$("#aba-ajuda").hidden) montarAjuda();
+      if (!$("#aba-ajuda").hidden) montarAjuda(true);
     }
   });
   // Setas do teclado trocam de aba, como em qualquer lista de abas.

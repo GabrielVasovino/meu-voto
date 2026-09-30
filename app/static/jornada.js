@@ -233,7 +233,7 @@ function notaAfinidade(x) { return x ? (x.a + 1) / (x.n + 2) : -1; }
 function pctAfinidade(x) { return Math.round((x.a / x.n) * 100); }
 
 function celulaAfinidade(x) {
-  if (!x) return `<small class="sem-afinidade">Sem bancada na Câmara para comparar</small>`;
+  if (!x) return `<small class="sem-afinidade" title="O partido não tem deputados federais hoje, então não há votações para comparar com as suas">Sem bancada para comparar</small>`;
   return `<span class="afin-mini" title="A bancada votou como você em ${x.a} de ${x.n} votações do questionário">
     <span class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></span><b>${pctAfinidade(x)}%<small> (${x.a} de ${x.n})</small></b></span>`;
 }
