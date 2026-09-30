@@ -57,7 +57,7 @@ function htmlSobreProjeto() {
     <h3 id="sobre-quem-fez">Quem fez</h3>
     <p>Sou Gabriel Vasovino e criei o Voto Informado por conta própria, sem ligação com partidos, campanhas ou governos. A ideia é simples: a informação para escolher bem já é pública, só que está espalhada e difícil de ler, e dá para juntar tudo num lugar e explicar em linguagem de gente.</p>
     <h3>Apoie o projeto</h3>
-    <p>O site é gratuito e continua sendo, mas tem custo de servidor e de manutenção. Se ele foi útil e você quiser ajudar a mantê-lo no ar, qualquer valor por Pix ajuda. É totalmente opcional.</p>
+    <p>O site é gratuito e continua sendo, mas tem custo de manutenção. Se ele foi útil e você quiser ajudar a mantê-lo no ar, qualquer valor por Pix ajuda. É totalmente opcional.</p>
     <div class="pix-caixa">
       <span class="pix-rot">Chave Pix (aleatória)</span>
       <div class="pix-linha">
@@ -66,7 +66,7 @@ function htmlSobreProjeto() {
       </div>
     </div>
     <h3>Privacidade</h3>
-    <p>A sua cédula e as respostas do questionário ficam guardadas só no seu navegador. O servidor não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
+    <p>A sua cédula e as respostas do questionário ficam guardadas só no seu navegador. O site não tem login e não recebe nem guarda votos. O CPF e o título de eleitor dos candidatos, que o TSE publica, são usados só para cruzar os dados e nunca aparecem na tela.</p>`;
 }
 
 function htmlSobreMetodologia() {
@@ -149,7 +149,7 @@ function htmlSobreDados() {
     </div>
     <p>Achou um dado errado ou um aviso injusto? Abra uma <a href="${REPOSITORIO}/issues" target="_blank" rel="noopener">issue no GitHub</a> explicando o caso, com o link da fonte se tiver.</p>
     <h3>De onde vêm os dados</h3>
-    <p>Tudo vem de fontes públicas oficiais, baixadas e atualizadas automaticamente pelo servidor. Nada é digitado à mão, exceto os textos explicativos do questionário, que citam as fontes em cada votação.</p>
+    <p>Tudo vem de fontes públicas oficiais, baixadas e atualizadas automaticamente a cada 6 horas. Nada é digitado à mão, exceto os textos explicativos do questionário, que citam as fontes em cada votação.</p>
     <ul>
       <li><strong>TSE:</strong> candidaturas, bens declarados, histórico eleitoral, prestação de contas de campanha e resultados de 2022 e 2024.</li>
       <li><strong>Câmara dos Deputados e ALESP:</strong> votações, presença, projetos, relatorias, cota parlamentar e verba de gabinete.</li>
@@ -162,9 +162,9 @@ function htmlSobreDados() {
       <li><strong>Banco Central:</strong> inflação (IPCA), para comparar patrimônios de anos diferentes.</li>
       <li><strong>Wikipédia e Wikimedia Commons:</strong> logos dos partidos, que são marcas de cada partido e aparecem só para identificá-los.</li>
     </ul>
-    <h3>Atualização das bases neste servidor</h3>
+    <h3>Atualização das bases</h3>
     <ul class="sobre-bases" id="sobre-bases"><li><span>Consultando…</span></li></ul>
-    <p class="nota-pequena">Quando uma base está sendo atualizada, o site continua usando a versão anterior. Se uma atualização falhar (por exemplo, com o site do órgão fora do ar), o servidor tenta de novo a cada hora.</p>`;
+    <p class="nota-pequena">O site é refeito a cada 6 horas com os dados mais novos. Se uma atualização falhar (por exemplo, com o site do órgão fora do ar), o site continua com a versão anterior e tenta de novo na próxima vez.</p>`;
 }
 
 async function preencherBases() {

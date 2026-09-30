@@ -85,13 +85,86 @@ function idade(nascimento) {
   return a;
 }
 
-async function api(caminho, opcoes) {
-  const r = await fetch(caminho, opcoes);
-  let dados = null;
-  try { dados = await r.json(); } catch { /* resposta sem JSON */ }
-  if (r.status === 401) location.reload(); // sessão expirou: o servidor mostra a tela de login
-  if (!r.ok) throw new Error(dados?.erro || `Erro ${r.status}`);
+// O site é estático: cada resposta de "/api/rota?parametros" é um arquivo JSON gerado por app/gerar_estatico.py,
+// num caminho que precisa ser igual ao de arquivo() e pedaco() de lá.
+function pedaco(valor) {
+  return String(valor).normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^A-Za-z0-9-]/gu, "_") || "_";
+}
+
+function arquivoApi(rota, params) {
+  const chaves = [...params.keys()].sort();
+  if (!chaves.length) return `api/${rota}.json`;
+  return `api/${rota}/${chaves.map((k) => pedaco(params.get(k))).join("/")}.json`;
+}
+
+async function api(caminho) {
+  const url = new URL(caminho, location.origin);
+  const rota = url.pathname.replace(/^\/api\//, "");
+  if (rota === "buscar") return buscarLocal(url.searchParams);
+  const r = await fetch(arquivoApi(rota, url.searchParams));
+  if (r.status === 404) throw new Error("Estes dados ainda não estão disponíveis no site.");
+  if (!r.ok) throw new Error(`Erro ${r.status}`);
+  const dados = await r.json();
+  if (dados?._status) throw new Error(dados.erro || `Erro ${dados._status}`);
   return dados;
+}
+
+// ---------- busca por número ou nome (mesmas regras de tse.buscar_numero e tse.buscar_nome) ----------
+
+const listasBusca = new Map();
+
+function candidatosPara(uf, cargo) {
+  const chave = `${uf}-${cargo}`;
+  if (!listasBusca.has(chave)) {
+    const pedido = api(`/api/candidatos?uf=${uf}&cargo=${cargo}`).then((d) => d.candidatos);
+    pedido.catch(() => listasBusca.delete(chave));
+    listasBusca.set(chave, pedido);
+  }
+  return listasBusca.get(chave);
+}
+
+function normalizarBusca(s) {
+  return String(s ?? "").normalize("NFKD").replace(/[^\x00-\x7f]/g, "").toUpperCase().trim();
+}
+
+// Candidaturas válidas primeiro; indeferidas e renunciadas por último.
+function prioridadeCandidatura(c) {
+  const s = (c.situacao || "").toLowerCase();
+  if (s === "deferido") return 0;
+  if (s.includes("indeferido") || s.includes("cancelado") || s.includes("renúncia") || s.includes("falecido")) return 2;
+  return 1;
+}
+
+async function buscarLocal(params) {
+  const uf = params.get("uf");
+  const cargo = +params.get("cargo");
+  const candidatos = await candidatosPara(uf, cargo);
+  const numero = params.get("numero");
+  if (numero != null) {
+    if (!/^\d{1,5}$/.test(numero)) throw new Error("Parâmetro 'numero' inválido");
+    if ([6, 7, 8].includes(cargo) && numero.length === 2) {
+      const doPartido = candidatos.filter((c) => String(c.numero).startsWith(numero));
+      if (!doPartido.length) return { candidatos: [], legenda: null };
+      const ref = doPartido.reduce((a, b) => (prioridadeCandidatura(b) < prioridadeCandidatura(a) ? b : a));
+      return {
+        candidatos: [],
+        legenda: { numero, partido: ref.partido, coligacao: ref.coligacao, qtdCandidatos: doPartido.length },
+      };
+    }
+    const achados = candidatos.filter((c) => String(c.numero) === numero);
+    return { candidatos: achados.sort((a, b) => prioridadeCandidatura(a) - prioridadeCandidatura(b)), legenda: null };
+  }
+  const q = (params.get("q") || "").trim();
+  if (q.length < 2) throw new Error("Digite pelo menos 2 letras");
+  const alvo = normalizarBusca(q.slice(0, 60));
+  const chave = (c) => [prioridadeCandidatura(c), normalizarBusca(c.nomeUrna).startsWith(alvo) ? 0 : 1, c.nomeUrna || ""];
+  const achados = candidatos
+    .filter((c) => normalizarBusca(c.nomeUrna).includes(alvo) || normalizarBusca(c.nomeCompleto).includes(alvo))
+    .sort((a, b) => {
+      const [x, y] = [chave(a), chave(b)];
+      return x[0] - y[0] || x[1] - y[1] || (x[2] < y[2] ? -1 : x[2] > y[2] ? 1 : 0);
+    });
+  return { candidatos: achados.slice(0, 10), legenda: null };
 }
 
 // ---------- esperas longas ----------
@@ -136,24 +209,25 @@ function htmlEsperaListas(p) {
     "Isso só acontece na primeira vez que alguém abre este estado e leva até 2 minutos. A tela atualiza sozinha.");
 }
 
-// Assim que o estado é conhecido (no guia de boas-vindas ou ao reabrir o site), pede em segundo plano o que as
-// próximas telas vão usar. Na primeira vez o servidor começa a montar os dados deste estado enquanto a pessoa
-// ainda lê o guia ou responde o questionário; nas outras, as respostas já ficam prontas no navegador e no servidor.
+// Assim que o estado é conhecido (no guia de boas-vindas ou ao reabrir o site), baixa em segundo plano o que as
+// próximas telas vão usar, para elas abrirem na hora.
 const aquecidos = new Set();
 function aquecerEstado(uf) {
   if (!uf || aquecidos.has(uf)) return;
   aquecidos.add(uf);
   const segundo = uf === "DF" ? 8 : 7;
-  const pedidos = [`/api/quiz?uf=${uf}`, `/api/listas?uf=${uf}&cargo=6`, `/api/listas?uf=${uf}&cargo=${segundo}`,
-    `/api/candidatos?uf=${uf}&cargo=5`, `/api/candidatos?uf=${uf}&cargo=3`, "/api/candidatos?uf=BR&cargo=1"];
-  for (const url of pedidos) fetch(url).catch(() => { /* só adianta o trabalho; a tela pede de novo quando abrir */ });
+  const pedidos = [`/api/quiz?uf=${uf}`, `/api/listas?uf=${uf}&cargo=6`, `/api/listas?uf=${uf}&cargo=${segundo}`];
+  for (const url of pedidos) api(url).catch(() => { /* só adianta o trabalho; a tela pede de novo quando abrir */ });
+  for (const [u, c] of [[uf, 5], [uf, 3], ["BR", 1]]) candidatosPara(u, c).catch(() => {});
 }
 
 function ufConsulta(cargo) { return cargo === 1 ? "BR" : estado.uf; }
 
+// As fotos vêm direto do TSE (DivulgaCandContas, eleição 20322002026); sem foto, ficam as iniciais.
 function fotoHtml(uf, id, nome, classe = "foto") {
   if (!id) return `<div class="${classe}" aria-hidden="true">${esc(iniciais(nome))}</div>`;
-  return `<img class="${classe}" alt="" loading="lazy" src="/api/foto?uf=${esc(uf)}&id=${esc(id)}"
+  const src = `https://divulgacandcontas.tse.jus.br/divulga/rest/arquivo/img/20322002026/${encodeURIComponent(id)}/${encodeURIComponent(uf)}`;
+  return `<img class="${classe}" alt="" loading="lazy" referrerpolicy="no-referrer" src="${esc(src)}"
     data-iniciais="${esc(iniciais(nome))}" onerror="trocarFoto(this)">`;
 }
 
@@ -197,8 +271,7 @@ function atualizarContagem() {
 
 // ---------- salvar ----------
 
-// No modo público (servidor com --publico) a cédula e o questionário ficam só neste navegador.
-const modoApp = { publico: false };
+// A cédula e o questionário ficam só neste navegador.
 const CHAVE_LOCAL = "meuvoto:cedula";
 
 function lerCedulaLocal() {
@@ -209,27 +282,13 @@ let timerSalvar;
 function salvar() {
   marcarPassos();
   clearTimeout(timerSalvar);
-  timerSalvar = setTimeout(async () => {
-    if (modoApp.publico) {
-      try {
-        localStorage.setItem(CHAVE_LOCAL, JSON.stringify(estado));
-        const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-        $("#salvo").textContent = `Salvo neste aparelho às ${hora}`;
-      } catch {
-        $("#salvo").textContent = "Este navegador não deixou salvar. Suas escolhas somem ao fechar a página.";
-      }
-      return;
-    }
+  timerSalvar = setTimeout(() => {
     try {
-      const r = await api("/api/cedula", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(estado),
-      });
-      const hora = new Date(r.salvoEm).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
-      $("#salvo").textContent = `Salvo às ${hora}`;
-    } catch (e) {
-      $("#salvo").textContent = `Não foi possível salvar: ${e.message}`;
+      localStorage.setItem(CHAVE_LOCAL, JSON.stringify(estado));
+      const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      $("#salvo").textContent = `Salvo neste aparelho às ${hora}`;
+    } catch {
+      $("#salvo").textContent = "Este navegador não deixou salvar. Suas escolhas somem ao fechar a página.";
     }
   }, 400);
 }
@@ -870,16 +929,7 @@ async function iniciar() {
   for (const [sigla, nome] of Object.entries(UFS)) sel.add(new Option(`${nome} (${sigla})`, sigla));
 
   try {
-    const m = await api("/api/login");
-    modoApp.publico = !!m.publico;
-  } catch { /* segue no modo pessoal */ }
-  if (modoApp.publico) {
-    $("#sair").hidden = true;
-    $("#aviso-dados").textContent = "Sua cédula e suas respostas ficam guardadas só neste aparelho. Nada disso é enviado ao servidor.";
-  }
-
-  try {
-    const salvo = modoApp.publico ? lerCedulaLocal() : await api("/api/cedula");
+    const salvo = lerCedulaLocal();
     if (salvo && salvo.uf) {
       estado.uf = salvo.uf;
       estado.votos = salvo.votos || {};
@@ -896,10 +946,6 @@ async function iniciar() {
   });
 
   $("#imprimir").addEventListener("click", imprimirCola);
-  $("#sair").addEventListener("click", async () => {
-    await fetch("/api/sair", { method: "POST" }).catch(() => {});
-    location.reload();
-  });
   iniciarJornada();
 }
 

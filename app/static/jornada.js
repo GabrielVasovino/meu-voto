@@ -303,7 +303,7 @@ async function desenharGuia() {
         <li>Passa pelos cargos na mesma ordem da urna, com uma explicação curta em cada um e a ficha de cada candidato, montada com dados públicos.</li>
         <li>No fim, imprime a cola para levar no dia da eleição.</li>
       </ol>
-      <p class="nota-pequena">Suas escolhas ficam guardadas só ${modoApp.publico ? "neste aparelho; nada é enviado ao servidor" : "no seu computador"}.</p>
+      <p class="nota-pequena">Suas escolhas ficam guardadas só neste aparelho; nada é enviado a lugar nenhum.</p>
       <div class="guia-acoes">
         <button type="button" class="btn" data-guia="voltar">← Voltar</button>
         <button type="button" class="btn primario" data-guia="avancar">Começar →</button>
