@@ -91,8 +91,8 @@ function htmlSobreMetodologia() {
     <h3>Nota final de cada pessoa</h3>
     <div class="sobre-formula">Sem mandato: nota = integridade<br>Com mandato: nota = integridade + 0,4 × (desempenho − 50), entre 0 e 100</div>
     <p>Assim, o desempenho soma ou tira no máximo 20 pontos, e quem está na média não ganha nem perde. Ter mandato não pesa contra ninguém.</p>
-    <h3>Nota da lista</h3>
-    <p>Na tela de deputados, cada lista (partido ou federação) tem a média das notas de quem ocuparia as vagas pela estimativa, porque é esse o grupo que o seu voto ajuda a eleger. A barra "Integridade de quem entraria" é a média só da integridade dessas pessoas.</p>
+    <h3>Por que as listas não têm nota</h3>
+    <p>Na tela de deputados, a nota é sempre de cada pessoa, e não da lista (partido ou federação). Uma média da lista dependeria demais do tamanho dela: numa lista que elege uma ou duas pessoas, um só candidato com avisos derruba a média, enquanto numa lista grande ele quase não pesa. Em vez disso, cada lista mostra quantas das pessoas que entrariam têm algo para conferir, e o anel em volta de cada foto mostra a nota da pessoa.</p>
     <h3>Estimativa de vagas para deputado</h3>
     <p>Não é previsão. A conta repete os votos de 2022 com as regras e os partidos de 2026:</p>
     <ol>
@@ -128,6 +128,7 @@ function htmlSobreDados() {
       <li><strong>CGU e Portal da Transparência:</strong> cadastros de empresas e pessoas punidas (CEIS, CNEP e CEAF) e emendas parlamentares.</li>
       <li><strong>TCU, Ministério do Trabalho e Ibama:</strong> contas julgadas irregulares, lista suja do trabalho escravo e áreas embargadas.</li>
       <li><strong>Banco Central:</strong> inflação (IPCA), para comparar patrimônios de anos diferentes.</li>
+      <li><strong>Wikipédia e Wikimedia Commons:</strong> logos dos partidos, que são marcas de cada partido e aparecem só para identificá-los.</li>
     </ul>
     <h3>Atualização das bases neste servidor</h3>
     <ul class="sobre-bases" id="sobre-bases"><li><span>Consultando…</span></li></ul>

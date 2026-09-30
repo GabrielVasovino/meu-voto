@@ -64,6 +64,14 @@ const GENEROS = { "MASC.": "Masculino", "FEM.": "Feminino" };
 const SIGLAS = { UNIAO: "UNIÃO", PCDOB: "PCdoB", MISSAO: "MISSÃO" };
 function sigla(s) { return SIGLAS[s] || s; }
 
+// Logos dos partidos (Wikipédia / Wikimedia Commons), em static/logos/SIGLA.png, sigla sem acento nem espaço.
+const LOGOS = new Set(("AGIR AVANTE CIDADANIA DC DEMOCRATA MDB MISSAO NOVO PCB PCDOB PCO PDT PL PODE PP PRD PRTB PSB PSD PSDB "
+  + "PSOL PSTU PT PV REDE REPUBLICANOS SOLIDARIEDADE UNIAO").split(" "));
+function logoPartido(s, classe = "logo-partido") {
+  const chave = String(s || "").normalize("NFD").replace(/[̀-ͯ\s]/g, "").toUpperCase();
+  return LOGOS.has(chave) ? `<img class="${classe}" src="logos/${chave}.png" alt="${esc(sigla(s))}" loading="lazy">` : "";
+}
+
 function iniciais(nome) {
   return String(nome ?? "?").split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]).join("").toUpperCase();
 }

@@ -320,7 +320,7 @@ function verOutros(n, [um, varios], html) {
 function cartaoPartido([s, x]) {
   const p = pctAfinidade(x);
   return `<div class="partido-card" title="${p}% de afinidade: votou como você em ${x.a} de ${x.n} votações do questionário">
-    <span class="partido-sigla">${esc(sigla(s))}</span>
+    <span class="partido-logo">${logoPartido(s) || `<span class="partido-sigla">${esc(sigla(s))}</span>`}</span>
     <strong>${p}%</strong>
     <span class="partido-trilho"><span style="width:${p}%"></span></span>
   </div>`;
@@ -363,7 +363,7 @@ function desenharCargosResultado() {
   const cartao = ({ c, x }, k) => `<article class="res-top${k === 0 ? " primeiro" : ""}">
       <span class="res-pos">${k + 1}º lugar</span>
       <div class="res-pessoa">${fotoHtml(uf, c.id, c.nomeUrna, "foto res-foto")}<h4>${nome(c)}</h4></div>
-      <div class="chips"><span class="chip">${esc(c.partido)}</span><span class="chip">Nº ${esc(c.numero)}</span></div>
+      <div class="chips">${logoPartido(c.partido, "logo-chip") || `<span class="chip">${esc(c.partido)}</span>`}<span class="chip">Nº ${esc(c.numero)}</span></div>
       ${x ? `${htmlPctCartao(x)}<div class="trilho"><span class="cheio" style="width:${pctAfinidade(x)}%"></span></div>`
         : `<p class="res-vagas">O partido não tem bancada na Câmara, então não há afinidade para calcular.</p>`}
       <p class="res-vagas" data-nota-quiz="${c.id}">Nota geral: calculando…</p>
@@ -442,8 +442,8 @@ async function preencherListasResultado() {
   podio.innerHTML = top.map(({ g, x }, k) => {
     const pcx = pctAfinidade(x);
     const partidos = g.partidos.length > 1
-      ? g.partidos.map((s) => `<span class="chip">${esc(sigla(s))}</span>`).join("")
-      : `<span class="chip">Sem federação</span>`;
+      ? g.partidos.map((s) => logoPartido(s, "logo-chip") || `<span class="chip">${esc(sigla(s))}</span>`).join("")
+      : (logoPartido(g.partidos[0], "logo-chip") || `<span class="chip">Sem federação</span>`);
     const vagas = g.vagas
       ? `${g.vagas} ${g.vagas === 1 ? "vaga estimada" : "vagas estimadas"} em ${nomeUf}`
       : `Nenhuma vaga estimada em ${nomeUf}`;
