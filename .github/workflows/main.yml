@@ -32,7 +32,7 @@ jobs:
 
             if [ ! -d "meu-voto" ]; then 
               echo "Clonando repositório meu-voto..."
-              git clone git@github.com:GabrielVasovino/meu-voto.git meu-voto
+              git clone git@github.com:meu-voto-org/meu-voto.git meu-voto
             fi
 
             cd meu-voto
