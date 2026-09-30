@@ -16,6 +16,7 @@ from curl_cffi import requests
 
 import alesp
 import camara
+import cassacoes
 import contas_anteriores
 import contratos
 import pgfn
@@ -630,6 +631,33 @@ def _sinais_improbidade(id_candidato):
 
 
 DOACAO_ALTA_ASSESSOR = 10_000
+
+
+def _sinais_cassacoes(id_candidato):
+    """Cassação ou registro negado em eleição anterior, pelos motivos que dizem algo sobre a pessoa. Só pesa quando a
+    candidatura terminou barrada; se terminou apta, a decisão caiu em recurso e só informa."""
+    lista = cassacoes.do_candidato(id_candidato)
+    if not lista:
+        return []
+    pontos, partes = 0, []
+    for x in sorted(lista, key=lambda x: x["ano"]):
+        tipos = {cassacoes.tipo_motivo(m) for m in x["motivos"]}
+        barrada = x.get("situacao") == "inapto"
+        if barrada and "grave" in tipos:
+            pontos = max(pontos, 30)
+        elif barrada and "ficha" in tipos:
+            pontos = max(pontos, 20)
+        onde = f"{x['local']}" + (f" ({x['uf']})" if x.get("uf") and x["uf"] != x["local"] else "")
+        fim = "e a candidatura terminou barrada" if barrada else ("mas a candidatura terminou liberada, o que indica decisão revertida"
+                                                                 if x.get("situacao") == "apto" else "")
+        partes.append(f"em {x['ano']}, para {x['cargo'].lower()} em {onde}: {listar(m.strip().rstrip('.') for m in x['motivos'])}"
+                      + (f", {fim}" if fim else ""))
+    cota = all(cassacoes.tipo_motivo(m) == "cota" for x in lista for m in x["motivos"])
+    return [_sinal("atencao" if pontos else "info", "Cassação ou registro negado em eleição anterior",
+                   "A Justiça Eleitoral registra " + "; ".join(partes) + "."
+                   + (" Fraude à cota de gênero cassa a lista inteira do partido, culpados ou não, por isso só informa." if cota else "")
+                   + ("" if pontos or cota else " Como a decisão não barrou a candidatura no fim, não tira pontos."),
+                   "TSE, motivos de cassação e candidaturas de eleições anteriores", categoria="cassacao", pontos=pontos or None)]
 
 
 DIVIDA_PROPRIA = ((1_000_000, 20), (100_000, 10))
@@ -1341,6 +1369,7 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_anteriores(id_candidato)
     sinais += _sinais_contratos(id_candidato)
     sinais += _sinais_divida(id_candidato)
+    sinais += _sinais_cassacoes(id_candidato)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)

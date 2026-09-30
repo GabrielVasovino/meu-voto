@@ -32,7 +32,7 @@ import tse
 
 TTL = 12 * tse.HORA
 # Muda quando a regra da nota muda, para o cálculo guardado ser refeito na hora.
-CALCULO = 8
+CALCULO = 9
 
 _estado = {}  # (uf, cargo) -> {"etapa", "feitos", "total"}
 _rodando = set()
