@@ -739,14 +739,22 @@ def sancoes_empresa(cnpj):
 
 
 PENALIDADE = {"atencao": 20, "alerta": 50}
+# Avisos que pesam menos que o normal: concentrar gastos num fornecedor costuma ter explicação simples
+# (uma agência que cuida de toda a campanha), então tira metade.
+PENALIDADE_TITULO = {"Gasto concentrado em um fornecedor": 10}
+
+
+def pontos(s):
+    """Quanto um aviso tira da integridade."""
+    return PENALIDADE_TITULO.get(s["titulo"].split(":")[0], PENALIDADE.get(s["nivel"], 0)) if s["nivel"] == "atencao"         else PENALIDADE.get(s["nivel"], 0)
 
 
 def integridade(sinais):
-    """Começa em 100; cada ponto que vale conferir tira 20 e cada alerta sério tira 50.
+    """Começa em 100; cada ponto que vale conferir tira 20 (gasto concentrado, 10) e cada alerta sério tira 50.
 
     Presença e gasto da cota falam de desempenho no mandato e já entram lá, então ficam de fora aqui.
     """
-    return max(0, 100 - sum(PENALIDADE.get(s["nivel"], 0) for s in sinais if s.get("categoria") != "mandato"))
+    return max(0, 100 - sum(pontos(s) for s in sinais if s.get("categoria") != "mandato"))
 
 
 def nota_pessoa(integ, desempenho):
@@ -779,7 +787,7 @@ def pontuacao(sinais, dep, dep_est):
         "casa": casa,
         "criterios": criterios,
         "nota": nota_pessoa(integ, d["nota"] if d else None),
-        "descontos": [{"titulo": x["titulo"], "nivel": x["nivel"], "pontos": PENALIDADE[x["nivel"]]}
+        "descontos": [{"titulo": x["titulo"], "nivel": x["nivel"], "pontos": pontos(x)}
                       for x in sinais if x["nivel"] in PENALIDADE and x.get("categoria") != "mandato"],
     }
 

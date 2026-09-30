@@ -12,6 +12,8 @@ cada pessoa; o servidor não recebe nem guarda votos.
 Uso: python app/server.py [--porta 8765] [--sem-navegador] [--tailscale] [--publico]
 """
 import argparse
+import hmac
+import os
 import ipaddress
 import json
 import mimetypes
@@ -42,6 +44,7 @@ import noticias
 import punicoes
 import sancoes
 import tse
+import uso
 
 RAIZ = Path(__file__).resolve().parent
 ESTATICOS = RAIZ / "static"
@@ -77,6 +80,13 @@ CACHE = Path.home() / ".meuvoto" / "cache"
 TAMANHO_MAX_CEDULA = 64 * 1024
 
 _lock_cedula = threading.Lock()
+
+# Painel de uso (/monitor.html): só para o dono do site. Sem a variável MONITOR_CHAVE, ele não existe.
+CHAVE_MONITOR = os.environ.get("MONITOR_CHAVE", "").strip()
+
+
+def _chave_ok(recebida):
+    return bool(CHAVE_MONITOR) and bool(recebida) and hmac.compare_digest(recebida.encode(), CHAVE_MONITOR.encode())
 
 
 class ErroPedido(Exception):
@@ -188,15 +198,46 @@ class Handler(BaseHTTPRequestHandler):
 
     # -- rotas -------------------------------------------------------------
 
-    def _visitante(self):
-        # Atrás do túnel da Cloudflare todo pedido chega de 127.0.0.1; o IP real vem neste cabeçalho.
-        return self.headers.get("CF-Connecting-IP") or self.client_address[0]
+    def _ip_real(self):
+        """IP de quem acessa. Atrás de um intermediário (túnel da Cloudflare ou o nginx do servidor), todo pedido
+        chega do mesmo endereço interno, e o IP de verdade vem num cabeçalho que só é aceito nesse caso."""
+        direto = self.client_address[0]
+        try:
+            interno = ipaddress.ip_address(direto).is_private
+        except ValueError:
+            interno = False
+        if not interno:
+            return direto
+        if self.headers.get("CF-Connecting-IP"):
+            return self.headers["CF-Connecting-IP"].strip()
+        if self.headers.get("X-Real-IP"):
+            return self.headers["X-Real-IP"].strip()
+        encaminhado = [x.strip() for x in (self.headers.get("X-Forwarded-For") or "").split(",") if x.strip()]
+        # O último da lista é o que o nosso próprio intermediário acrescentou; os anteriores vêm do navegador.
+        return encaminhado[-1] if encaminhado else None
+
+    def send_response(self, code, message=None):
+        self._status = code
+        super().send_response(code, message)
+
+    def handle_one_request(self):
+        self._status = None
+        inicio = time.perf_counter()
+        super().handle_one_request()
+        if self._status is not None and MODO["publico"]:
+            try:
+                ip = self._ip_real()
+                uso.registrar(urlparse(self.path).path, self._status, time.perf_counter() - inicio,
+                              ip or self.client_address[0], ip is not None)
+            except Exception:
+                pass
 
     def do_GET(self):
         url = urlparse(self.path)
         qs = parse_qs(url.query)
         try:
-            if MODO["publico"] and url.path.startswith("/api/") and _excedeu_limite(self._visitante()):
+            # Sem o IP real (intermediário que não o informa), todo mundo pareceria uma pessoa só: aí não limita.
+            if MODO["publico"] and url.path.startswith("/api/") and self._ip_real() and _excedeu_limite(self._ip_real()):
                 raise ErroPedido(429, "Muitas consultas seguidas. Espere um minuto e tente de novo.")
             if url.path == "/api/login":
                 logado = self._logado()
@@ -275,6 +316,12 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/config":
                 return self._json(200, {"temChavePortal": analise.tem_chave_portal(), "publico": MODO["publico"],
                                         "sancoes": sancoes.status()})
+            if url.path == "/api/uso":
+                if not (MODO["publico"] and _chave_ok(self.headers.get("X-Chave"))):
+                    raise ErroPedido(404, "Rota desconhecida")
+                return self._json(200, uso.resumo())
+            if url.path == "/monitor.html" and not (MODO["publico"] and _chave_ok(_param(qs, "chave"))):
+                return self._json(404, {"erro": "Não encontrado"})
             if url.path == "/api/status":
                 return self._json(200, {"bases": _status_bases()})
             if url.path == "/api/projecao":

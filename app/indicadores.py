@@ -1,7 +1,7 @@
 """Indicadores de qualidade de quem ocuparia as vagas de cada lista (deputados).
 
 Para cada pessoa que, pela estimativa, ocuparia uma vaga:
-- integridade (0 a 100): começa em 100; cada ponto "vale conferir" tira 20 e cada
+- integridade (0 a 100): começa em 100; cada ponto "vale conferir" tira 20 (gasto concentrado, 10) e cada
   alerta sério tira 50. Usa só dados locais (TSE, trajetória, gastos de campanha e
   emendas), sem consultar a Receita, para caber no cálculo do estado inteiro;
 - desempenho (0 a 100), para quem já tem mandato de deputado: na Câmara, a posição em
@@ -31,6 +31,8 @@ import sancoes
 import tse
 
 TTL = 12 * tse.HORA
+# Muda quando a regra da nota muda, para o cálculo guardado ser refeito na hora.
+CALCULO = 2
 
 _estado = {}  # (uf, cargo) -> {"etapa", "feitos", "total"}
 _rodando = set()
@@ -112,7 +114,7 @@ def _calcular(uf, cargo):
             comAlertaSerio=sum(1 for p in ps if p["alertas"]),
             indice=_media(p["nota"] for p in ps),
         )
-    return {"geradoEm": time.strftime("%Y-%m-%d %H:%M"), "grupos": grupos}
+    return {"geradoEm": time.strftime("%Y-%m-%d %H:%M"), "calculo": CALCULO, "grupos": grupos}
 
 
 def _rodar(uf, cargo):
@@ -136,7 +138,8 @@ def obter(uf, cargo):
     # (ex.: o índice de sócios da Receita, que no primeiro dia do servidor só fica pronto horas depois).
     bases = [gastos._banco(), empresas._arquivo(), sancoes._arquivo(), punicoes._arquivo()]
     base_mais_nova = max((b.stat().st_mtime for b in bases if b.exists()), default=0)
-    velho = not arq.exists() or time.time() - arq.stat().st_mtime > TTL or arq.stat().st_mtime < base_mais_nova
+    velho = (not arq.exists() or time.time() - arq.stat().st_mtime > TTL or arq.stat().st_mtime < base_mais_nova
+             or (dados or {}).get("calculo") != CALCULO)
     chave = (uf, cargo)
     if velho and gastos._banco().exists():
         with _lock:

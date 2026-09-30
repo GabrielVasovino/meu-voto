@@ -16,7 +16,10 @@ jobs:
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          MONITOR_CHAVE: ${{ secrets.MONITOR_CHAVE }}
         with:
+          envs: MONITOR_CHAVE
           host: ${{ secrets.ORACLE_VM_IP }}
           username: ${{ secrets.ORACLE_VM_USER }}
           key: ${{ secrets.ORACLE_SSH_PRIVATE_KEY }}

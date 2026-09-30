@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Monitor do servidor</title>
+<style>
+  :root { --bg: #f6f7f9; --card: #fff; --text: #1b1f24; --muted: #5b6470; --border: #e1e4e8; --bar: #3b82f6; --warn: #d97706; --bad: #dc2626; --ok: #16a34a; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #111418; --card: #1a1e24; --text: #e8eaed; --muted: #9aa3ad; --border: #2c323a; --bar: #60a5fa; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, sans-serif; padding: 20px 16px 40px; }
+  main { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 1.3rem; margin: 0 0 2px; }
+  .sub { color: var(--muted); margin: 0 0 18px; font-size: .88rem; }
+  .grade { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .tile { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .tile span { display: block; font-size: .78rem; color: var(--muted); }
+  .tile strong { font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+  .tile small { display: block; font-size: .75rem; color: var(--muted); }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 1rem; margin: 0 0 10px; }
+  .barras { display: flex; align-items: flex-end; gap: 2px; height: 120px; }
+  .barras div { flex: 1; background: var(--bar); border-radius: 2px 2px 0 0; min-height: 1px; }
+  .barras div.limite { background: var(--warn); }
+  .barras div.erro { background: var(--bad); }
+  .eixo { display: flex; justify-content: space-between; font-size: .72rem; color: var(--muted); margin-top: 4px; }
+  .estado { font-weight: 600; }
+  .ok { color: var(--ok); } .warn { color: var(--warn); } .bad { color: var(--bad); }
+  ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); font-size: .88rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Monitor do servidor</h1>
+  <p class="sub">Atualiza sozinho a cada 10 segundos. Os números são só da memória do servidor e zeram quando ele reinicia (por exemplo, a cada atualização do site). <span id="hora"></span></p>
+  <p class="estado" id="estado">Carregando…</p>
+  <div class="grade" id="tiles"></div>
+  <div class="card">
+    <h2>Consultas por minuto, última hora</h2>
+    <div class="barras" id="barras"></div>
+    <div class="eixo"><span id="eixo-ini"></span><span>agora</span></div>
+    <ul>
+      <li>Azul: minuto normal. Laranja: alguém recebeu "muitas consultas seguidas". Vermelho: houve erro do servidor.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Como ler</h2>
+    <ul>
+      <li><strong>Tempo médio de resposta</strong> abaixo de 1 segundo é tranquilo. Se passar de 3 segundos por vários minutos, o servidor está sobrecarregado.</li>
+      <li><strong>Carga do processador</strong> perto ou acima do número de processadores quer dizer que ele está no limite.</li>
+      <li><strong>Erros</strong> e <strong>bloqueios por excesso</strong> deveriam ficar em zero ou perto disso.</li>
+    </ul>
+  </div>
+</main>
+<script>
+"use strict";
+const fmt = new Intl.NumberFormat("pt-BR");
+function tempo(s) {
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+  return h ? `${h} h ${m} min` : `${m} min`;
+}
+function tile(rotulo, valor, extra = "", classe = "") {
+  return `<div class="tile"><span>${rotulo}</span><strong class="${classe}">${valor}</strong>${extra ? `<small>${extra}</small>` : ""}</div>`;
+}
+async function atualizar() {
+  let d;
+  try {
+    const r = await fetch("/api/uso", { cache: "no-store", headers: { "X-Chave": new URLSearchParams(location.search).get("chave") || "" } });
+    if (!r.ok) throw new Error(r.status);
+    d = await r.json();
+  } catch (e) {
+    document.getElementById("estado").innerHTML = `<span class="bad">O servidor não respondeu (${e.message}).</span>`;
+    return;
+  }
+  const ult = d.minutos.slice(-5);
+  const soma = (k) => ult.reduce((t, m) => t + (m[k] || 0), 0);
+  const api5 = soma("api");
+  const comTempo = ult.filter((m) => m.mediaMs != null);
+  const media = comTempo.length ? Math.round(comTempo.reduce((t, m) => t + m.mediaMs * m.api, 0) / comTempo.reduce((t, m) => t + m.api, 0)) : null;
+  const pico = Math.max(0, ...d.minutos.map((m) => m.api));
+  const s = d.servidor;
+  const carga = s.carga ? s.carga[0] : null;
+  const nivelCarga = carga == null ? "" : carga >= s.processadores ? "bad" : carga >= s.processadores * 0.7 ? "warn" : "ok";
+  const nivelTempo = media == null ? "" : media > 3000 ? "bad" : media > 1000 ? "warn" : "ok";
+  const problemas = soma("erros") + soma("limite");
+  const estado = nivelCarga === "bad" || nivelTempo === "bad" ? `<span class="bad">Sobrecarregado agora.</span>`
+    : nivelCarga === "warn" || nivelTempo === "warn" || problemas ? `<span class="warn">Funcionando, mas vale ficar de olho.</span>`
+    : `<span class="ok">Tudo tranquilo.</span>`;
+  document.getElementById("estado").innerHTML = estado;
+  document.getElementById("hora").textContent = `Última leitura: ${d.agora}.`;
+  document.getElementById("tiles").innerHTML = [
+    tile("Pessoas nos últimos 5 min", fmt.format(d.visitantes5min), `${fmt.format(d.visitantes1h)} na última hora`),
+    tile("Consultas por minuto", fmt.format(Math.round(api5 / 5)), `média dos últimos 5 min; pico da hora: ${fmt.format(pico)}`),
+    tile("Tempo médio de resposta", media == null ? "—" : media >= 1000 ? `${(media / 1000).toFixed(1)} s` : `${media} ms`, `${soma("lento")} consultas acima de 3 s em 5 min`, nivelTempo),
+    tile("Carga do processador", carga == null ? "—" : String(carga).replace(".", ","), `${s.processadores} processadores`, nivelCarga),
+    tile("Memória usada", s.memoriaMb == null ? "—" : `${fmt.format(s.memoriaMb)} MB`, `${s.linhas} linhas de execução`),
+    tile("Erros e bloqueios", fmt.format(problemas), `últimos 5 min (${soma("erros")} erros, ${soma("limite")} por excesso)`, problemas ? "warn" : "ok"),
+    tile("Ligado há", tempo(d.ligadoHa), d.pedidosSemIpReal ? `${fmt.format(d.pedidosSemIpReal)} pedidos sem IP real` : ""),
+  ].join("");
+  const max = Math.max(1, pico);
+  document.getElementById("barras").innerHTML = d.minutos.map((m) =>
+    `<div class="${m.erros ? "erro" : m.limite ? "limite" : ""}" style="height:${(100 * m.api) / max}%" title="${m.hora}: ${m.api} consultas${m.mediaMs != null ? `, média ${m.mediaMs} ms` : ""}${m.limite ? `, ${m.limite} bloqueios` : ""}${m.erros ? `, ${m.erros} erros` : ""}"></div>`).join("");
+  document.getElementById("eixo-ini").textContent = d.minutos[0].hora;
+}
+atualizar();
+setInterval(atualizar, 10000);
+</script>
+</body>
+</html>
