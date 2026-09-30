@@ -3,7 +3,7 @@
 // "Sobre e metodologia": por que o site existe, como cada número é calculado e de onde vêm os dados,
 // com o link do código aberto. Fica fora da trilha dos cargos, num painel aberto pelo topo.
 
-const REPOSITORIO = "https://github.com/GabrielVasovino/meu-voto";
+const REPOSITORIO = "https://github.com/meu-voto-org/meu-voto";
 const CHAVE_PIX = "7817702b-3506-447d-be0d-ac8ae2f7686b";
 const sobre = { aba: "projeto" };
 
@@ -13,11 +13,12 @@ const ABAS_SOBRE = {
   dados: "Dados e código aberto",
 };
 
-function abrirSobre(aba = sobre.aba) {
+function abrirSobre(aba = sobre.aba, secao = null) {
   sobre.aba = aba;
   const dlg = $("#sobre");
   if (!dlg.open) dlg.showModal();
   desenharSobre();
+  if (secao) document.getElementById(secao)?.scrollIntoView({ block: "start" });
 }
 
 function desenharSobre() {
@@ -53,7 +54,7 @@ function htmlSobreProjeto() {
       <li><strong>As notas seguem um método próprio.</strong> A nota geral, a integridade, o desempenho e a afinidade são cálculos deste site, explicados na aba Metodologia, e não uma avaliação oficial. A afinidade usa só ${quizDados?.perguntas?.length || 15} votações da Câmara.</li>
       <li><strong>Sem ligação com campanhas.</strong> O site não tem ligação com candidatos, partidos ou órgãos públicos e não recomenda em quem votar.</li>
     </ul>
-    <h3>Quem fez</h3>
+    <h3 id="sobre-quem-fez">Quem fez</h3>
     <p>Sou Gabriel Vasovino e criei o Voto Informado por conta própria, sem ligação com partidos, campanhas ou governos. A ideia é simples: a informação para escolher bem já é pública, só que está espalhada e difícil de ler, e dá para juntar tudo num lugar e explicar em linguagem de gente.</p>
     <h3>Apoie o projeto</h3>
     <p>O site é gratuito e continua sendo, mas tem custo de manutenção. Se ele foi útil e você quiser ajudar a mantê-lo no ar, qualquer valor por Pix ajuda. É totalmente opcional.</p>
@@ -202,12 +203,12 @@ async function preencherBases() {
       return;
     }
     const ir = e.target.closest("[data-abrir-sobre]");
-    if (ir) abrirSobre(ir.dataset.abrirSobre);
+    if (ir) abrirSobre(ir.dataset.abrirSobre, ir.dataset.sobreSecao);
   });
 })();
 
 // Links "Como calculamos" espalhados pelo site abrem direto a metodologia.
 document.addEventListener("click", (e) => {
   const link = e.target.closest("[data-abrir-sobre]");
-  if (link && !$("#sobre").contains(link)) abrirSobre(link.dataset.abrirSobre);
+  if (link && !$("#sobre").contains(link)) abrirSobre(link.dataset.abrirSobre, link.dataset.sobreSecao);
 });
