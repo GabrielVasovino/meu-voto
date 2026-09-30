@@ -508,7 +508,8 @@ class Handler(BaseHTTPRequestHandler):
                                   deputados={d: v["deputados"][d] for d in deputados if d in v["deputados"]}))
         return {"pronto": True, "criterio": base["criterio"], "atualizadoEm": base.get("atualizadoEm"),
                 "perguntas": perguntas,
-                "deputados": list(deputados.values())}
+                "deputados": list(deputados.values()),
+                "federacoes": _federacoes(uf)}
 
     def _ler_cedula(self):
         with _lock_cedula:
@@ -518,6 +519,25 @@ class Handler(BaseHTTPRequestHandler):
                 return json.loads(CEDULA.read_text(encoding="utf-8"))
             except json.JSONDecodeError:
                 return {}
+
+
+def _federacoes(uf):
+    """Partido -> todos os partidos da sua federação, ex.: "REDE" -> ["PSOL", "REDE"].
+
+    Federação vota como um bloco só na Câmara, então a afinidade de um candidato a senador, governador ou
+    presidente usa a federação inteira. As federações são nacionais; o nome delas vem das candidaturas a deputado
+    federal (no Brasil todo, usa SP).
+    """
+    mapa = {}
+    try:
+        for c in tse.listar(uf if uf != "BR" else "SP", 6):
+            siglas = partidos.siglas_do_grupo(c.get("coligacao"))
+            if len(siglas) > 1:
+                for s in siglas:
+                    mapa[s] = siglas
+    except Exception:
+        pass
+    return mapa
 
 
 def _proposicao(id_proposicao):

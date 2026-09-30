@@ -191,6 +191,11 @@ function votoDoBloco(q, siglas) {
   return sim > nao ? "Sim" : "Não";
 }
 
+// O partido e os outros da mesma federação, que votam como um bloco só na Câmara (ex.: REDE -> PSOL e REDE).
+function blocoDoPartido(sigla) {
+  return quizDados?.federacoes?.[sigla] || [sigla];
+}
+
 // Em quantas votações do questionário respondidas o bloco votou como você.
 function afinidadePartidos(siglas) {
   if (!quizDados || quizDados.uf !== estado.uf) return null;

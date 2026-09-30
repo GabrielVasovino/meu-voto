@@ -349,7 +349,7 @@ function desenharCargosResultado() {
   const vistos = new Set();
   const itens = resCargos.listas[cargo]
     .filter((c) => candidaturaValida(c) && !vistos.has(`${c.nomeUrna}|${c.numero}`) && vistos.add(`${c.nomeUrna}|${c.numero}`))
-    .map((c) => ({ c, x: afinidadePartidos([c.partido]) }))
+    .map((c) => ({ c, x: afinidadePartidos(blocoDoPartido(c.partido)) }))
     .sort((a, b) => notaAfinidade(b.x) - notaAfinidade(a.x) || a.c.nomeUrna.localeCompare(b.c.nomeUrna, "pt-BR"));
   const abas = CARGOS_RESULTADO.map(([c, rot]) =>
     `<button type="button" role="tab" data-res-cargo="${c}" aria-selected="${c === cargo}">${rot}</button>`).join("");

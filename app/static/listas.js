@@ -296,7 +296,7 @@ function htmlVisaoPessoas(grupos, item) {
   const pessoas = grupos.flatMap((g) => g.eleitos.map((c) => ({ ...c, grupo: g.id, ind: indicadoresAtual?.grupos?.[g.id]?.pessoas?.[String(c.id)] })));
   // Na visão por pessoa, vale o voto da própria pessoa quando ela já é deputada federal; senão, o do partido.
   const ordenadas = ordenarPorNota(pessoas, (c) => c.ind?.nota, (c) => c.ind?.integridade,
-    (c) => afinidadePessoa(c.id) || afinidadePartidos([c.partido]));
+    (c) => afinidadePessoa(c.id) || afinidadePartidos(blocoDoPartido(c.partido)));
   const linhas = ordenadas.map((c) => {
     const i = c.ind;
     const anel = i?.nota == null ? "" : `anel-${nivelNota(i.nota)}`;

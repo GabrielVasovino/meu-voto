@@ -602,7 +602,7 @@ async function carregarMajoritario(item, reordenado = false, manter = false) {
   const total = validos.length;
   const uf = ufConsulta(item.cargo);
   if (comAfinidade) {
-    const af = (c) => afinidadePartidos([c.partido]);
+    const af = (c) => afinidadePartidos(blocoDoPartido(c.partido));
     if (filtroMaj.minimo) validos = validos.filter((c) => escolhidos.has(c.id) || (af(c) && pctAfinidade(af(c)) >= filtroMaj.minimo));
     if (filtroMaj.ordem === "afinidade") validos.sort((a, b) => notaAfinidade(af(b)) - notaAfinidade(af(a)));
   }
@@ -619,7 +619,7 @@ async function carregarMajoritario(item, reordenado = false, manter = false) {
   const cartao = (c) => {
     const valida = candidaturaValida(c);
     const meu = escolhidos.has(c.id);
-    const af = comAfinidade ? afinidadePartidos([c.partido]) : null;
+    const af = comAfinidade ? afinidadePartidos(blocoDoPartido(c.partido)) : null;
     const acao = meu
       ? `<button type="button" class="btn" data-retirar="${c.id}">Retirar da cédula</button>`
       : valida ? `<button type="button" class="btn primario" data-cedula="${c.id}">Pôr na cédula</button>` : "";
