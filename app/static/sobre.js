@@ -70,7 +70,7 @@ function htmlSobreMetodologia() {
     <h3>Empresas ligadas a candidatos</h3>
     <p>A Receita Federal publica todo mês os sócios de todas as empresas do país, com o CPF parcialmente escondido. O site cruza esses dados com os candidatos de 2026 pelo nome completo e pelos 6 dígitos do meio do CPF, que o TSE publica, e chega a mais de 10 mil candidatos sócios de empresas. A partir daí aparecem três tipos de aviso:</p>
     <ul>
-      <li><strong>Fornecedor é empresa de outro candidato:</strong> a campanha pagou uma empresa que tem como sócio alguém que também disputa a eleição de 2026, do mesmo partido ou de outro. Pode ser um serviço comum, mas também é um caminho para o dinheiro de campanha chegar a um aliado. Tira pontos se o valor for relevante (R$ 10 mil ou 10% dos gastos).</li>
+      <li><strong>Campanha pagou empresa de outro candidato:</strong> a campanha pagou uma empresa que tem como sócio alguém que também disputa a eleição de 2026, do mesmo partido ou de outro. Pode ser um serviço comum, mas também é um caminho para o dinheiro de campanha chegar a um aliado. Tira pontos se o valor for relevante (R$ 10 mil ou 10% dos gastos).</li>
       <li><strong>Campanha pagou empresa do próprio candidato:</strong> a lei permite, mas o dinheiro volta para quem está concorrendo.</li>
       <li><strong>Empresa do candidato recebeu de outras campanhas ou de emendas:</strong> o outro lado do mesmo cruzamento, somando também as emendas parlamentares pagas a ela.</li>
     </ul>

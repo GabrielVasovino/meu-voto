@@ -455,7 +455,7 @@ def _sinais_portal(cpf, contas, nome=None):
     for base, param, nome in consultas:
         d = _get_json(f"{URL_PORTAL}/{base}?{param}={cpf}&pagina=1", f"portal_{base}_{cpf}.json", cab)
         if d:
-            s.append(_sinal("alerta", f"Candidato aparece no {base.upper()}",
+            s.append(_sinal("alerta", f"Candidato está num cadastro de punidos ({base.upper()})",
                             f"{'Há um registro' if len(d) == 1 else f'Há {len(d)} registros'} no {nome}.", "Portal da Transparência",
                             f"https://portaldatransparencia.gov.br/sancoes/{base}"))
     for f in (contas or {}).get("fornecedores", [])[:5]:
@@ -464,7 +464,7 @@ def _sinais_portal(cpf, contas, nome=None):
         for base, param, nome in consultas[:2]:
             d = _get_json(f"{URL_PORTAL}/{base}?{param}={f['cnpj']}&pagina=1", f"portal_{base}_{f['cnpj']}.json", cab)
             if d:
-                s.append(_sinal("alerta", f"Fornecedor aparece no {base.upper()}",
+                s.append(_sinal("alerta", f"Empresa contratada está num cadastro de punidos ({base.upper()})",
                                 f"{f['nome']}, que recebeu {_brl(f['valor'])} desta campanha, "
                                 f"{'tem um registro' if len(d) == 1 else f'tem {len(d)} registros'} no {nome}.",
                                 "Portal da Transparência"))
@@ -479,7 +479,7 @@ def _sinais_sancoes(cpf, contas, nome):
     s = []
     for r in sancoes.pessoa(cpf, nome) or []:
         desde = f", desde {r['inicio']}" if r["inicio"] else ""
-        s.append(_sinal("alerta", f"Candidato aparece no {r['sigla']}",
+        s.append(_sinal("alerta", f"Candidato está num cadastro de punidos ({r['sigla']})",
                         f"{r['sancao'] or 'Sanção'} aplicada por {r['orgao'] or 'órgão público'}{desde}. "
                         f"Registro no {r['cadastro']}.",
                         "Portal da Transparência (arquivos da CGU)", f"https://portaldatransparencia.gov.br/sancoes/{r['sigla'].lower()}"))
@@ -490,7 +490,7 @@ def _sinais_sancoes(cpf, contas, nome):
         if achados:
             siglas = sorted({r["sigla"] for r in achados})
             s.append(_sinal("atencao" if relevante(f["valor"], (contas or {}).get("despesasContratadas")) else "info",
-                            f"Fornecedor aparece no {' e no '.join(siglas)}",
+                            f"Empresa contratada está num cadastro de punidos ({', '.join(siglas)})",
                             f"{f['nome']}, que recebeu {_brl(f['valor'])} desta campanha, "
                             f"{'tem um registro' if len(achados) == 1 else f'tem {len(achados)} registros'} nos cadastros nacionais de punidos.",
                             "Portal da Transparência (arquivos da CGU)"))
@@ -535,7 +535,7 @@ def _sinais_empresas(lista, nome_dep=None, ja_sinalizadas=frozenset()):
                             FONTE_RECEITA + " e Portal da Transparência", categoria="emendas"))
         if e.get("sancoes"):
             siglas = sorted({x["sigla"] for x in e["sancoes"]})
-            s.append(_sinal("atencao", "Empresa do candidato tem sanção",
+            s.append(_sinal("atencao", "Empresa do candidato está num cadastro de punidos",
                             f"{nome} aparece no {' e no '.join(siglas)}, cadastro nacional de empresas punidas.",
                             FONTE_RECEITA + " e CGU"))
     return s
@@ -578,7 +578,7 @@ def _sinais_emenda_campanha(dep, g):
         if emendas.normalizar(autor) != alvo or not valor:
             continue
         f = pagos[doc]
-        s.append(_sinal("info", f"Empresa que recebeu emenda do candidato atende a campanha: {f['nome']}",
+        s.append(_sinal("info", f"Empresa que recebeu emenda do candidato foi paga pela campanha: {f['nome']}",
                         f"{f['nome']} recebeu {_brl(valor)} de emendas indicadas por {dep['nome']} e foi paga com "
                         f"{_brl(f['valor'])} por esta campanha. Pode ser um fornecedor comum da região, mas mostra o mesmo "
                         "dinheiro público e de campanha passando pela mesma empresa.",
@@ -600,7 +600,7 @@ def _sinais_fornecedor_candidato(lista, total=None):
             texto_rede = (f" A mesma empresa também recebeu {_brl(rede['total'])} de {outras}"
                           f"{_texto_partidos(rede.get('porPartido'), rede['quantas'])}.")
         s.append(_sinal("atencao" if relevante(f["valor"], total) else "info",
-                        f"Fornecedor é empresa de outro candidato: {' '.join((f['nome'] or '').split())}",
+                        f"Campanha pagou empresa de outro candidato: {' '.join((f['nome'] or '').split())}",
                         f"Esta campanha pagou {_brl(f['valor'])} a essa empresa, que tem como sócio(a) quem também disputa "
                         f"a eleição de 2026: {quem}.{texto_rede} Pode ser um serviço comum, mas também é um caminho para o "
                         "dinheiro de campanha chegar a um aliado.", FONTE_RECEITA + " e TSE", cnpj=f["cnpj"]))
@@ -728,7 +728,7 @@ def _sinais_punicoes_fornecedores(contas):
                    if any(r["vigente"] for r in por.get("tcu_inidoneo", [])) else [])
         if motivos:
             s.append(_sinal("atencao" if relevante(f["valor"], total) else "info",
-                            f"Fornecedor com punição: {f['nome']}",
+                            f"Empresa contratada tem punição: {f['nome']}",
                             f"{f['nome']}, que recebeu {_brl(f['valor'])} desta campanha, {' e '.join(motivos)}.",
                             "Ministério do Trabalho e TCU", cnpj=f["cnpj"]))
     return s
@@ -1145,9 +1145,9 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_empresas(socio_de, dep["nome"] if dep else None, ja)
     de_candidatos = empresas.fornecedores_de_candidatos(id_candidato)
     if de_candidatos:
-        # Substitui o aviso mais fraco da análise de gastos ("Sócio é candidato em 2026"), que só vale para o mesmo nome e estado.
+        # Substitui o aviso mais fraco da análise de gastos ("Sócio da empresa contratada é candidato em 2026"), que só vale para o mesmo nome e estado.
         cobertos = {f["basico"] for f in de_candidatos}
-        sinais = [x for x in sinais if not (x["titulo"].startswith("Sócio é candidato em 2026") and (x.get("cnpj") or "")[:8] in cobertos)]
+        sinais = [x for x in sinais if not (x["titulo"].startswith("Sócio da empresa contratada é candidato em 2026") and (x.get("cnpj") or "")[:8] in cobertos)]
         sinais += _sinais_fornecedor_candidato(de_candidatos, (contas or {}).get("despesasContratadas"))
     ordem = {"alerta": 0, "atencao": 1, "info": 2, "ok": 3}
     sinais.sort(key=lambda s: ordem[s["nivel"]])

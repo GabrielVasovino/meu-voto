@@ -413,7 +413,9 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
 
     if receita:
         if receita.get("situacao") and receita["situacao"].upper() != "ATIVA":
-            add("alerta", "CNPJ não está ativo", f"Na Receita Federal, a empresa aparece como {receita['situacao'].lower()}.")
+            add("alerta", "Empresa contratada não está ativa na Receita",
+                f"Na Receita Federal, a empresa aparece como {receita['situacao'].lower()}. Uma empresa nessa situação não "
+                "deveria estar prestando serviço nem emitindo nota.")
         if receita.get("mei") and rede["total"] > LIMITE_MEI:
             desta = valor if valor is not None else rede["total"]
             nivel = "alerta" if desta > LIMITE_MEI_TOLERANCIA else "atencao"
@@ -423,13 +425,14 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
                 "pesa conforme o quanto ela pagou.")
         cap = receita.get("capitalSocial")
         if cap is not None and cap < 10_000 and rede["total"] > 1_000_000:
-            add("info", "Capital social baixo para o volume",
-                f"A empresa declara capital social de R$ {_milhar(cap)} e já recebeu R$ {_milhar(rede['total'])} de campanhas.")
+            add("info", "Empresa pequena no papel recebeu muito de campanhas",
+                f"Os sócios declararam ter investido só R$ {_milhar(cap)} na empresa (o capital social), e ela já recebeu "
+                f"R$ {_milhar(rede['total'])} de campanhas em 2026.")
         atividades = {receita.get("cnae", "")[:2]} | {x[:2] for x in receita.get("cnaesSecundarios", [])}
         for cat in categorias if (valor if valor is not None else rede["total"]) >= 20_000 else []:
             esperadas = ATIVIDADES_ESPERADAS.get(cat)
             if esperadas and not (esperadas & atividades):
-                add("atencao", "Atividade registrada não combina com o serviço",
+                add("atencao", "Empresa contratada não é do ramo do serviço",
                     f"A empresa foi contratada para {cat.lower()}, mas nenhuma das atividades registradas na Receita é "
                     f"desse ramo. A atividade principal dela é {(receita.get('cnaeDescricao') or 'não informada').lower()}.")
                 break
@@ -443,27 +446,29 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
                 if n == nome_cand:
                     add("alerta", "Empresa do próprio candidato", f"{socio['nome']} aparece entre os sócios da empresa.")
                 elif n in doadores:
-                    add("atencao", "Sócio do fornecedor doou para a campanha",
-                        f"{socio['nome']} é sócio da empresa e também doou para esta campanha.")
+                    add("atencao", "Sócio de empresa contratada também doou para a campanha",
+                        f"{socio['nome']} é sócio de uma empresa que a campanha contratou e também doou dinheiro para ela. "
+                        "Pode ser só apoio, mas também é um jeito de o dinheiro doado voltar para quem doou, pela empresa.")
                 elif n in candidato.get("pagosPf", ()):
-                    add("atencao", "Sócio do fornecedor também foi pago pela campanha",
-                        f"{socio['nome']} é sócio da empresa e também recebeu pagamento desta campanha como pessoa física "
-                        "(por exemplo, como coordenador ou prestador de serviço).")
+                    add("atencao", "Sócio de empresa contratada também recebeu da campanha",
+                        f"{socio['nome']} é sócio de uma empresa que a campanha contratou e, além disso, recebeu dinheiro "
+                        "da campanha em nome próprio (por exemplo, como coordenador ou prestador de serviço). Ou seja, "
+                        "recebeu duas vezes: pela empresa e como pessoa.")
                 elif nomes_cand and n in nomes_cand and nomes_cand[n]["uf"] == receita.get("uf"):
                     # Mesmo estado da empresa, para não confundir homônimos.
                     o = nomes_cand[n]
-                    add("info", "Sócio é candidato em 2026",
+                    add("info", "Sócio da empresa contratada é candidato em 2026",
                         f"{socio['nome']}, sócio da empresa, disputa o cargo de {tse.CARGOS.get(o['cargo'], 'cargo').lower()} "
                         f"pelo {o['partido']} em {o['uf']}.")
                 elif raro and n.split()[-1] == raro:
-                    add("atencao", "Sócio com o mesmo sobrenome do candidato",
+                    add("atencao", "Sócio da empresa contratada tem o sobrenome do candidato",
                         f"{socio['nome']}, sócio da empresa, tem o sobrenome {raro.title()}, que é pouco comum. Pode ser "
                         "coincidência ou parentesco.")
     if rede["candidatos"] == 1 and rede["total"] > 200_000 and not rede["em2022"]:
-        add("info", "Fornecedor exclusivo e estreante",
-            "A empresa atende só esta campanha em 2026 e não trabalhou em campanhas em 2022.")
+        add("info", "Empresa atende só esta campanha e não trabalhou em 2022",
+            "Nenhuma outra campanha de 2026 contratou esta empresa, e ela não aparece nas campanhas de 2022.")
     if rede["concentracaoPartido"] and rede["candidatos"] >= 5 and rede["concentracaoPartido"] > 0.9:
-        add("info", "Atende quase só um partido",
+        add("info", "Empresa contratada atende quase só um partido",
             f"{rede['concentracaoPartido']:.0%} do que a empresa recebeu veio de campanhas do {rede['partidoPrincipal']}.")
     if receita and receita.get("abertura"):
         abertura = date.fromisoformat(receita["abertura"])
@@ -487,14 +492,14 @@ def _sinais_fornecedor(doc, rede, receita, categorias, candidato=None, doadores=
             recebido = f"recebeu R$ {_milhar(valor or 0)}" + (f", {parte:.1%} dos gastos da campanha".replace(".", ",") if parte else "")
             motivo = (recebido if dias < 60 else
                       f"recebeu {parte:.0%} dos gastos da campanha" if parte and parte >= 0.10 else
-                      "há outro ponto sobre ela acima" if outro else None)
+                      "tem outro ponto para conferir" if outro else None)
             if exclusiva and vespera and muito:
                 add("alerta", "Empresa aberta às vésperas recebeu grande parte dos gastos",
                     f"A empresa foi aberta em {abertura:%d/%m/%Y}, {quando}, {clientes}, e recebeu R$ {_milhar(valor or 0)}"
                     f"{f' ({parte:.0%} dos gastos)' if parte else ''}. É o padrão de empresa criada para a campanha.{quem}")
             elif exclusiva and motivo:
                 add("atencao", "Empresa aberta pouco antes da campanha",
-                    f"A empresa foi aberta em {abertura:%d/%m/%Y}, {quando}, {clientes}, e {motivo}. "
+                    f"A empresa foi aberta em {abertura:%d/%m/%Y}, {quando}, {clientes}. Ela {motivo}. "
                     f"Às vezes ela é criada justamente para a campanha.{quem}")
             else:
                 add("info", "Empresa aberta pouco antes da campanha",
@@ -719,8 +724,9 @@ def _sinais_candidato(cand, total, total_pj, ordenados, composicao, mediana_tota
                 f"Esse tipo de despesa leva {item['parte']:.0%} do dinheiro, contra {item['medianaPares']:.0%} numa campanha "
                 "típica do mesmo porte para o mesmo cargo no estado.")
     if por_pessoa and max(por_pessoa.values()) > 50_000:
-        add("info", "Pagamento alto a uma pessoa física",
-            f"Uma só pessoa recebeu R$ {_milhar(max(por_pessoa.values()))} da campanha.")
+        add("info", "Uma só pessoa recebeu muito da campanha",
+            f"Uma só pessoa recebeu R$ {_milhar(max(por_pessoa.values()))} da campanha. Pode ser um coordenador ou "
+            "profissional bem pago; a lista de gastos mostra quem é e por qual serviço.")
     feminino = (cand.get("genero") or "").lower().startswith("fem")
     if feminino and not coletivo and not agencia_partido and receitas_total > 50_000             and receita_fefc / receitas_total > 0.8 and compartilhados:
         top = max(compartilhados, key=lambda x: x["parteDoGasto"])
