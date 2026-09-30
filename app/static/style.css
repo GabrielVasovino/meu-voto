@@ -558,7 +558,7 @@ table.lista tr:last-child td { border-bottom: 0; }
   color: var(--accent-ink); margin: 0 0 4px;
 }
 .passo-intro h2 { font-size: 1.5rem; letter-spacing: -.01em; margin: 0 0 8px; }
-.passo-intro p { color: var(--text-2); margin: 0 0 8px; max-width: 75ch; line-height: 1.55; }
+.passo-intro p { color: var(--text-2); margin: 0 0 8px; line-height: 1.55; }
 .passo-slots { margin-bottom: 22px; }
 .passo-nav {
   display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap;

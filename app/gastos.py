@@ -838,13 +838,11 @@ def _sinais_doou_e_recebeu(lista):
     fortes = [x for x in lista if x["doou"] >= DOOU_MINIMO and x["recebeu"] > x["doou"]]
     if not fortes:
         return []
-    exemplos = "; ".join(f"{x['nome'].title()} doou R$ {_milhar(x['doou'])} e recebeu R$ {_milhar(x['recebeu'])}"
-                         for x in fortes[:3])
-    quem = "Uma pessoa doou" if len(fortes) == 1 else f"{len(fortes)} pessoas doaram"
-    return [{"nivel": "atencao", "titulo": "Doador recebeu da campanha mais do que doou",
-             "detalhe": f"{quem} R$ {_milhar(DOOU_MINIMO)} ou mais para a campanha e depois recebeu dela, como pagamento, "
-                        f"mais do que doou: {exemplos}. Pode ser alguém da equipe que também contribuiu, mas também é um "
-                        "jeito de o dinheiro doado voltar para quem doou.", "cnpj": None}]
+    detalhe = " ".join(f"{x['nome'].title()} doou R$ {_milhar(x['doou'])} e recebeu R$ {_milhar(x['recebeu'])}."
+                       for x in fortes[:3])
+    if len(fortes) > 3:
+        detalhe += f" E mais {len(fortes) - 3} {'pessoa' if len(fortes) == 4 else 'pessoas'}."
+    return [{"nivel": "atencao", "titulo": "Doador recebeu da campanha mais do que doou", "detalhe": detalhe, "cnpj": None}]
 
 
 def _doadores_rede(c, sq_candidato, minimo=5):

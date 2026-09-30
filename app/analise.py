@@ -102,9 +102,12 @@ def _get_json(url, chave_cache, headers=None):
     return dados
 
 
-def _sinal(nivel, titulo, detalhe, fonte, link=None, cnpj=None, categoria="integridade"):
-    return {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fonte": fonte, "link": link, "cnpj": cnpj,
-            "categoria": categoria}
+def _sinal(nivel, titulo, detalhe, fonte, link=None, cnpj=None, categoria="integridade", pontos=None):
+    s = {"nivel": nivel, "titulo": titulo, "detalhe": detalhe, "fonte": fonte, "link": link, "cnpj": cnpj,
+         "categoria": categoria}
+    if pontos is not None:
+        s["pontos"] = pontos  # desconto próprio, quando o aviso tem faixas (ex.: tamanho do aumento de patrimônio)
+    return s
 
 
 def _brl(v):
@@ -224,6 +227,17 @@ def trajetoria(bruto):
     }
 
 
+# Patrimônio que cresceu bem acima da inflação durante um mandato: o desconto cresce com o ganho real por ano.
+# O aviso só existe a partir de R$ 250 mil por ano (ver estranho() abaixo).
+FAIXAS_PATRIMONIO = [(500_000, 5), (1_000_000, 10), (3_000_000, 15), (None, 20)]
+
+
+def _pontos_patrimonio(por_ano):
+    for teto, pontos in FAIXAS_PATRIMONIO:
+        if teto is None or por_ano < teto:
+            return pontos
+
+
 def _sinais_trajetoria(t):
     s = []
     if not t:
@@ -270,7 +284,13 @@ def _sinais_trajetoria(t):
             texto += (" O crescimento aconteceu enquanto a pessoa tinha cargo eletivo, e é mais do que alguém consegue guardar só "
                       "com o salário. Pode ter explicação, como herança, venda de imóvel, valorização de terras ou renda de outra "
                       "atividade, e a lista de bens de cada eleição ajuda a entender de onde veio.")
-            s.append(_sinal("atencao", "Patrimônio cresceu bem acima da inflação", texto, "TSE e Banco Central (IPCA)"))
+            por_ano = (b["bensHoje"] - a["bensHoje"]) / max(1, b["ano"] - a["ano"])
+            desconto = _pontos_patrimonio(por_ano)
+            texto += f" Pelo tamanho do aumento, tira {desconto} pontos."
+            sinal = _sinal("atencao", "Patrimônio cresceu bem acima da inflação", texto, "TSE e Banco Central (IPCA)",
+                           pontos=desconto)
+            sinal["ganhoPorAno"] = round(por_ano)
+            s.append(sinal)
         else:
             texto += (" A pessoa não tinha cargo eletivo nesse período, então o crescimento tende a vir da atividade "
                       "profissional ou empresarial dela. Por isso não tira pontos; a lista de bens de cada eleição mostra de onde veio.")
@@ -747,6 +767,8 @@ PENALIDADE_TITULO = {"Gasto concentrado em um fornecedor": 10, "Empresa aberta p
 
 def pontos(s):
     """Quanto um aviso tira da integridade."""
+    if s["nivel"] == "atencao" and s.get("pontos") is not None:
+        return s["pontos"]
     return PENALIDADE_TITULO.get(s["titulo"].split(":")[0], PENALIDADE.get(s["nivel"], 0)) if s["nivel"] == "atencao"         else PENALIDADE.get(s["nivel"], 0)
 
 
