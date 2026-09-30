@@ -431,7 +431,7 @@ def panorama_listas(uf, cargo):
     """Todas as listas do estado de uma vez: vagas, margens, quem ocuparia as vagas e quem está na disputa."""
     proj = projecao(uf, cargo)
     grupos = _grupos_2026(uf, cargo)
-    resumo = lambda c: {k: c[k] for k in ("id", "numero", "nomeUrna", "partido", "posicao", "chance")}
+    resumo = lambda c: {k: c[k] for k in ("id", "numero", "nomeUrna", "partido", "posicao", "chance", "forca") if k in c}
     for g in proj["grupos"]:
         r = ranking(uf, cargo, g["id"], proj, grupos)
         aptos = [c for c in r["candidatos"] if c["posicao"]]

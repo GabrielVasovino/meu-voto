@@ -89,6 +89,18 @@ def _digitos(s):
     return "".join(c for c in str(s or "") if c.isdigit())
 
 
+def _historico_alerj():
+    """Quem passou pelos gabinetes da ALERJ desde 2005 (pacote de alerj_historico.py)."""
+    arq = Path(__file__).resolve().parent / "dados_publicos" / "alerj_historico.json.gz"
+    if not arq.exists():
+        return {}
+    dados = json.loads(gzip.decompress(arq.read_bytes()))["gabinetes"]
+    return {sq: {camara._normalizar(a["nome"]) for a in g["assessores"] if len(a["nome"].split()) >= 3} for sq, g in dados.items()}
+
+
+historico_alerj = {}
+
+
 def _ano(ano, col, cpf_para_sq, nome_de):
     norm = camara._normalizar
     url = BASE_TSE + col["zip"]
@@ -131,7 +143,8 @@ def _ano(ano, col, cpf_para_sq, nome_de):
         item["empresaPropria"] = [{"nome": p["nome"].title(), "valor": round(p["valor"])}
                                   for b, p in pagos_pj.get(sq, {}).items() if b in proprias]
         g = gabinetes.do_candidato(sq)
-        equipe = {n for n in (g or {}).get("assessores", {}) if len(n.split()) >= 3} - {nome_de.get(sq)}
+        equipe = {n for n in (g or {}).get("assessores", {}) if len(n.split()) >= 3} | historico_alerj.get(sq, set())
+        equipe -= {nome_de.get(sq)}
         item["assessores"] = sorted(({"nome": d["nome"].title(), "valor": round(d["valor"])}
                                      for d in doou.values() if norm(d["nome"]) in equipe), key=lambda x: -x["valor"])
         if item["doouRecebeu"] or item["empresaPropria"] or item["assessores"]:
@@ -149,6 +162,7 @@ def montar():
     print(f"{len(cpf_para_sq)} candidatos de 2026 com CPF")
     empresas._carregar()
     gabinetes._carregar()
+    historico_alerj.update(_historico_alerj())
     candidatos = {}
     for ano, col in ANOS.items():
         for sq, item in _ano(ano, col, cpf_para_sq, nome_de).items():

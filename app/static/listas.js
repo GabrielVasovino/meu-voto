@@ -304,18 +304,20 @@ function htmlVisaoPessoas(grupos, item) {
     (c) => afinidadePessoa(c.id) || afinidadePartidos(blocoDoPartido(c.partido)));
   const linhas = ordenadas.map((c) => {
     const i = c.ind;
-    const anel = i?.nota == null ? "" : `anel-${nivelNota(i.nota)}`;
-    const detalhe = !i ? "Calculando…"
-      : `Integridade ${i.integridade ?? "—"}${i.desempenho != null ? `, desempenho ${i.desempenho} como deputado ${i.casa === "estadual" ? "estadual" : "federal"}` : ", sem mandato de deputado"}.${i.titulos.length ? ` ${esc(i.titulos.join("; "))}.` : ""}${textoAfinidadePessoa(c.id) ? ` ${textoAfinidadePessoa(c.id)}.` : ""}`;
+    const af = afinidadePessoa(c.id);
+    const selos = [
+      af ? `<span class="selo">Afinidade <strong>${pctAfinidade(af)}%</strong></span>` : "",
+      i?.nota != null ? `<span class="selo selo-${nivelNota(i.nota)}" title="${esc(EXPLICA_NOTA_GERAL)}${i.titulos.length ? ` Pontos de atenção: ${esc(i.titulos.join("; "))}.` : ""}">Nota <strong>${i.nota}</strong></span>` : `<span class="selo">Nota <strong>…</strong></span>`,
+      c.forca != null ? `<span class="selo">Força <strong>${Math.round(c.forca)}</strong></span>` : "",
+    ].join("");
     return `<li class="pessoa-linha${voto?.id === c.id ? " meu" : ""}">
       <button type="button" class="pessoa-botao" data-ficha-lista="${c.id}" title="Abrir a ficha">
-        <span class="rosto ${anel}">${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto rosto-foto")}</span>
+        <span class="rosto ${i?.nota == null ? "" : `anel-${nivelNota(i.nota)}`}">${fotoHtml(estado.uf, c.id, c.nomeUrna, "foto rosto-foto")}</span>
         <span class="pessoa-info">
           <strong>${esc(nomeProprio(c.nomeUrna))}</strong>
-          <small>${esc(c.partido)}, ${c.posicao}º na lista ${esc(agremiacao(c.grupo))}</small>
-          <small class="pessoa-det">${detalhe}</small>
+          <small>Número ${esc(c.numero || "")}, ${esc(c.partido)}, ${c.posicao}º na lista ${esc(agremiacao(c.grupo))}</small>
+          <span class="selos">${selos}</span>
         </span>
-        <span class="pessoa-nota${i?.nota == null ? " vazia" : ""}" title="${esc(EXPLICA_NOTA_GERAL)}">${i?.nota ?? "—"}<small>nota geral</small></span>
       </button>
     </li>`;
   }).join("");

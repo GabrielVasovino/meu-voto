@@ -18,6 +18,7 @@ Tudo é refeito uma vez por semana em segundo plano.
 """
 import html
 import io
+from pathlib import Path
 import json
 import re
 import sys
@@ -40,7 +41,7 @@ URL_CAMARA_SECRETARIOS = ("https://www2.camara.leg.br/transparencia/recursos-hum
 URL_ALESP_LOTACOES = "https://www.al.sp.gov.br/repositorioDados/administracao/funcionarios_lotacoes.xml"
 TTL = 7 * 24 * tse.HORA
 # Muda quando entra uma fonte nova, para o índice guardado ser refeito na hora em vez de esperar a semana.
-VERSAO = 2
+VERSAO = 3
 # Na ALESP há histórico desde os anos 1990; conta quem esteve no gabinete a partir daqui.
 ALESP_DESDE = "2015-01-01"
 
@@ -177,6 +178,13 @@ def _alerj(s, cands, add):
         raise RuntimeError("relatório de gabinetes não encontrado")
     pdf = s.get(URL_ALERJ_GABINETES.format(arquivo[-1]), timeout=300).content
     urna = _por_urna(cands, "RJ")
+    # Histórico desde 2005, tirado do Diário Oficial no computador pessoal (alerj_historico.py) e enviado pronto.
+    import gzip
+    pacote = Path(__file__).resolve().parent / "dados_publicos" / "alerj_historico.json.gz"
+    if pacote.exists():
+        for sq, g in json.loads(gzip.decompress(pacote.read_bytes()))["gabinetes"].items():
+            for a in g["assessores"]:
+                add(sq, "ALERJ", g["politico"], {"nome": a["nome"], "atual": False, "desde": a["desde"]})
     with pdfplumber.open(io.BytesIO(pdf)) as p:
         for pag in p.pages:
             for linha in (pag.extract_text() or "").splitlines():
