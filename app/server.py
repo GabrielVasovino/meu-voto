@@ -49,6 +49,7 @@ import empresas
 import noticias
 import punicoes
 import sancoes
+import senado
 import tse
 import uso
 
@@ -569,7 +570,7 @@ def _proposicao(id_proposicao):
 
 # Bases de dados públicos que se refazem sozinhas. Cada iniciar() só baixa de novo se a cópia estiver velha,
 # faltando ou se a última tentativa falhou, e nunca roda duas vezes ao mesmo tempo.
-BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes)
+BASES = (camara, gastos, alesp, emendas, sancoes, empresas, punicoes, gabinetes, improbidade, contas_anteriores, contratos, pgfn, cassacoes, senado)
 CONFERIR_BASES_A_CADA = 3600
 
 
@@ -590,6 +591,7 @@ DESCRICAO_BASES = (
     (contratos, lambda: contratos.PACOTE, "Contratos do governo federal com empresas de candidatos", "Portal da Transparência"),
     (pgfn, lambda: pgfn.PACOTE, "Dívida ativa com a União de candidatos e suas empresas", "PGFN"),
     (cassacoes, lambda: cassacoes.PACOTE, "Cassações e registros negados em eleições de 2014 a 2024", "TSE"),
+    (senado, senado._arquivo, "Presença dos senadores nas votações do plenário", "Senado Federal"),
 )
 
 

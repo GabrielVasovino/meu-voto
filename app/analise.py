@@ -29,6 +29,7 @@ import historico
 import partidos as perfis
 import punicoes
 import sancoes
+import senado
 import tse
 
 URL_PORTAL = "https://api.portaldatransparencia.gov.br/api-de-dados"
@@ -631,6 +632,25 @@ def _sinais_improbidade(id_candidato):
 
 
 DOACAO_ALTA_ASSESSOR = 10_000
+
+
+def _sinais_senado(id_candidato):
+    """Presença nas votações nominais do Senado, para quem é senador. Fala do mandato: não mexe na integridade."""
+    p = senado.presenca(id_candidato)
+    if not p or not p.get("total"):
+        return []
+    taxa = p["votou"] / p["total"]
+    sem = p["total"] - p["votou"] - p["justificada"]
+    med = p.get("mediana")
+    nivel = "atencao" if med and taxa < med / 2 else "info"
+    return [_sinal(nivel, "Participação nas votações do Senado",
+                   f"Votou em {taxa:.0%} das {p['total']} votações nominais do plenário em que era senador desde 2023"
+                   + (f", enquanto um senador típico vota em {med:.0%}" if med else "") + ". "
+                   + (f"Das ausências, {p['justificada']} {'foi justificada' if p['justificada'] == 1 else 'foram justificadas'} "
+                      f"(licença, missão oficial ou atividade parlamentar) e {sem} "
+                      f"{'não teve justificativa' if sem == 1 else 'não tiveram justificativa'}." if p["total"] > p["votou"]
+                      else "Não faltou a nenhuma."),
+                   "Senado Federal, dados abertos legislativos", categoria="mandato")]
 
 
 def _sinais_cassacoes(id_candidato):
@@ -1370,6 +1390,7 @@ def analisar(uf, cargo, id_candidato):
     sinais += _sinais_contratos(id_candidato)
     sinais += _sinais_divida(id_candidato)
     sinais += _sinais_cassacoes(id_candidato)
+    sinais += _sinais_senado(id_candidato)
     socio_de = empresas.cruzamentos(id_candidato)
     sinais += _sinais_punicoes(bruto.get("cpf"), socio_de)
     sinais += _sinais_punicoes_fornecedores(contas)
