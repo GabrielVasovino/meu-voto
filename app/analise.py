@@ -686,20 +686,25 @@ def _sinais_cassacoes(id_candidato):
     for x in sorted(lista, key=lambda x: x["ano"]):
         tipos = {cassacoes.tipo_motivo(m) for m in x["motivos"]}
         barrada = x.get("situacao") == "inapto"
+        # Ficha Limpa não tira pontos: é consequência de outra decisão (condenação, contas rejeitadas), que pode ter
+        # caído depois (ex.: condenação anulada), e as que ainda valem já aparecem pelas fontes atuais (CNJ, TCU,
+        # cadastros de punidos). Só pesa o que a Justiça Eleitoral julgou sobre a conduta na própria eleição.
         if barrada and "grave" in tipos:
             pontos = max(pontos, 30)
-        elif barrada and "ficha" in tipos:
-            pontos = max(pontos, 20)
-        onde = f"{x['local']}" + (f" ({x['uf']})" if x.get("uf") and x["uf"] != x["local"] else "")
+        onde = "" if x.get("uf") == "BR" else f" em {x['local']}" + (f" ({x['uf']})" if x.get("uf") and x["uf"] != x["local"] else "")
         fim = "e a candidatura terminou barrada" if barrada else ("mas a candidatura terminou liberada, o que indica decisão revertida"
                                                                  if x.get("situacao") == "apto" else "")
-        partes.append(f"em {x['ano']}, para {x['cargo'].lower()} em {onde}: {listar(m.strip().rstrip('.') for m in x['motivos'])}"
+        partes.append(f"em {x['ano']}, para {x['cargo'].lower()}{onde}: {listar(m.strip().rstrip('.') for m in x['motivos'])}"
                       + (f", {fim}" if fim else ""))
     cota = all(cassacoes.tipo_motivo(m) == "cota" for x in lista for m in x["motivos"])
     return [_sinal("atencao" if pontos else "info", "Cassação ou registro negado em eleição anterior",
                    "A Justiça Eleitoral registra " + "; ".join(partes) + "."
                    + (" Fraude à cota de gênero cassa a lista inteira do partido, culpados ou não, por isso só informa." if cota else "")
-                   + ("" if pontos or cota else " Como a decisão não barrou a candidatura no fim, não tira pontos."),
+                   + (" A inelegibilidade pela Ficha Limpa vem de outra decisão, que pode ter sido revertida depois; as que "
+                      "ainda valem aparecem nos outros avisos, por isso esta não tira pontos." if not pontos and not cota
+                      and any(cassacoes.tipo_motivo(m) == "ficha" for x in lista for m in x["motivos"]) else "")
+                   + ("" if pontos or cota or any(cassacoes.tipo_motivo(m) == "ficha" for x in lista for m in x["motivos"])
+                      else " Como a decisão não barrou a candidatura no fim, não tira pontos."),
                    "TSE, motivos de cassação e candidaturas de eleições anteriores", categoria="cassacao", pontos=pontos or None)]
 
 
