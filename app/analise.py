@@ -1081,6 +1081,9 @@ def desempenho_de(dep, dep_est, id_candidato=None):
     d = alerj_desempenho.do_candidato(id_candidato) if id_candidato else None
     if d:
         return d, "estadual", alerj_desempenho.criterios_rotulados(d["criterios"])
+    d = senado.desempenho(id_candidato) if id_candidato else None
+    if d:
+        return d, "senado", senado.criterios_rotulados(d["criterios"])
     return None, None, None
 
 

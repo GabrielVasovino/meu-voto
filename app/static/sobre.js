@@ -113,6 +113,7 @@ function htmlSobreMetodologia() {
     <ul>
       <li><strong>Câmara dos Deputados:</strong> presença nas votações do plenário, projetos aprovados que mudam regras, relatorias, poucos projetos simbólicos (homenagens, datas e nomes de obras, com peso dobrado), economia na cota parlamentar e menos emendas Pix (as transferências especiais, que são mais difíceis de rastrear).</li>
       <li><strong>ALESP:</strong> presença nas comissões, leis aprovadas que mudam regras, poucos projetos simbólicos (com peso dobrado) e economia na verba de gabinete.</li>
+      <li><strong>Senado:</strong> presença nas votações nominais do plenário, leis aprovadas que mudam regras (de autoria ou coautoria), poucos projetos simbólicos (com peso dobrado) e economia na cota parlamentar (CEAPS), desde fevereiro de 2023, comparando os 81 senadores.</li>
       <li><strong>ALERJ:</strong> faltas nas sessões (relatórios mensais de presença), leis aprovadas que mudam regras (de autoria ou coautoria) e poucos projetos simbólicos (com peso dobrado), desde fevereiro de 2023. A ALERJ não publica a verba de gabinete por deputado de um jeito que dê para ler, então esse critério fica de fora.</li>
     </ul>
     <h3>Nota final de cada pessoa</h3>
